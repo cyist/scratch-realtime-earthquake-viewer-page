@@ -66,6 +66,20 @@ Webアプリケーションのため、[ウェブサイト](https://kotoho7.gith
 - [Scratch プロジェクトページ](https://scratch.mit.edu/projects/636244032)
 - [YouTube コミュニティ投稿](https://www.youtube.com/post/UgkxGV7Jutqt9kMEByTHdihpdSBVYzcl0_Ue)
 
+### パッケージ化後の最適化
+
+TurboWarp Packager で `docs` を出力し直した後は、以下を実行してメモリ使用量を削減してください (iOS などメモリの少ない端末向け)。
+
+```sh
+npm install
+npm run optimize
+```
+
+- `optimize-memory`: `docs/index.js` の描画処理を書き換え、SVG コスチュームごとの canvas を共有化・テクスチャ容量の上限設定・モバイル端末での描画解像度の抑制を行います
+- `optimize-svg`: SVG コスチュームのパスデータの小数精度を落として軽量化します
+
+実行後は `docs/hash` を更新してください (Service Worker のキャッシュが更新されます)。
+
 ## 緊急地震速報の注意事項
 
 このプロジェクトでは、高度利用者向けの **緊急地震速報（予報）** が表示されます。以下の特徴を踏まえて情報を活用してください。
