@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0f1115">
+<title>YCY 波形工坊</title>
+<style>
+:root{--bg:#0f1115;--card:#181b22;--card2:#20242d;--line:#2c313c;--fg:#e8eaf0;--mut:#8b93a3;--acc:#6ee7b7;--A:#ff8a5c;--B:#4cc9f0;--C:#c792ea;--bad:#ff4d6d;--warn:#ffc857}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;overscroll-behavior:none}
+body{padding-bottom:calc(68px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:20;background:rgba(15,17,21,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:8px 12px 6px}
+.hrow{display:flex;align-items:center;gap:8px;max-width:860px;margin:0 auto}
+.hrow h1{font-size:16px;margin:0;white-space:nowrap}
+.pill{font-size:12px;padding:2px 9px;border-radius:99px;background:var(--card2);color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#batt{flex:none}.hrow h1{font-size:15px}.pill.on{background:#12382c;color:var(--acc)}
+.sp{flex:1}
+#scopeWrap{max-width:860px;margin:6px auto 0;display:flex;gap:8px;align-items:stretch}
+#scope{flex:1;min-width:0;height:54px;border-radius:8px;background:#0a0c10;border:1px solid var(--line)}
+.ro{display:flex;flex-direction:column;justify-content:space-between;font:600 12px/1.3 ui-monospace,monospace;min-width:44px}
+.cA{color:var(--A)}.cB{color:var(--B)}.cC{color:var(--C)}
+main{max-width:860px;margin:0 auto;padding:12px}
+section{display:none}section.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.card h2{font-size:15px;margin:0 0 10px}
+.card h2 small{font-weight:400;color:var(--mut);margin-left:6px}
+p.h{color:var(--mut);font-size:13px;margin:6px 0}
+button,select,input[type=text],input[type=number]{font:inherit;color:var(--fg);background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+button{cursor:pointer;touch-action:manipulation;white-space:nowrap}
+button:active{transform:scale(.97)}
+button.pri{background:var(--acc);color:#06281c;border-color:transparent;font-weight:600}
+button.bad{background:var(--bad);color:#fff;border-color:transparent;font-weight:700}
+button.on{outline:2px solid var(--acc)}
+button:disabled{opacity:.45}
+#stopBtn{padding:6px 14px;border-radius:99px}
+#recBtn{padding:6px 10px;font-size:13px}#recBtn.on{background:#5a1220;outline:none;color:#ff9aac}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.row>label{color:var(--mut);font-size:13px}
+input[type=range]{flex:1;min-width:120px;accent-color:var(--acc);height:28px}
+.sl{display:grid;grid-template-columns:86px 1fr 40px;gap:8px;align-items:center;margin:6px 0}
+.sl b{font-size:13px}.sl output{font:600 13px ui-monospace,monospace;text-align:right}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:6px 10px;font-size:13px}
+.seg button.on{background:var(--acc);color:#06281c;outline:none}
+nav{position:fixed;bottom:0;left:0;right:0;z-index:30;background:#12141a;border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;max-width:172px;border:0;background:none;border-radius:0;padding:10px 0 9px;color:var(--mut);font-size:12px}
+nav button i{display:block;font-style:normal;font-size:19px;line-height:1.1}
+nav button.on{color:var(--acc);outline:none}
+canvas{display:block;width:100%;touch-action:none;border-radius:10px;background:#0a0c10;border:1px solid var(--line)}
+.trk{position:relative;margin:6px 0}.trk span{position:absolute;left:8px;top:4px;font-size:12px;font-weight:600;pointer-events:none}
+.trk canvas{height:92px}
+.wl{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.wl:first-child{border-top:0}
+.wl svg{width:92px;height:34px;background:#0a0c10;border-radius:6px;flex:none}
+.wl .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wl .nm small{display:block;color:var(--mut)}
+.wl button{padding:6px 10px}
+.mp{display:flex;align-items:center;gap:6px;font-size:13px}.mp select{padding:5px 8px}
+.rate{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}
+.rate button{padding:12px 0;font-weight:700}
+.stat{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
+.stat div{background:var(--card2);border-radius:10px;padding:8px 2px}
+.stat b{display:block;font:700 18px ui-monospace,monospace}.stat small{color:var(--mut);font-size:11px}
+#log{font:12px/1.5 ui-monospace,monospace;color:var(--mut);max-height:150px;overflow:auto;white-space:pre-wrap}
+details summary{cursor:pointer;color:var(--mut);font-size:13px}
+.warn{border-color:#5a4a1a;background:#221d0e;color:#f3dfa4;font-size:13px}
+#pad{height:300px}#game{height:270px}#tChart{height:120px}
+.tag{font-size:12px;padding:1px 8px;border-radius:99px;background:var(--card2);color:var(--mut)}
+</style>
+</head>
+<body>
+<header>
+  <div class="hrow">
+    <h1>YCY 波形工坊</h1>
+    <span id="conn" class="pill">未连接</span>
+    <span id="batt" class="pill" hidden></span>
+    <span class="sp"></span>
+    <button id="recBtn" title="把当前输出录制成波形">● 录制</button>
+    <button id="stopBtn" class="bad">急停</button>
+  </div>
+  <div id="scopeWrap">
+    <canvas id="scope"></canvas>
+    <div class="ro"><span class="cA">A <span id="roA">0</span></span><span class="cB">B <span id="roB">0</span></span><span class="cC">C <span id="roC">0</span></span></div>
+  </div>
+</header>
+
+<main>
+<!-- ============ 设备 ============ -->
+<section id="t-dev" class="on">
+  <div class="card warn" id="noBle" hidden>当前浏览器不支持 Web Bluetooth。请使用 Android / 桌面版 Chrome 或 Edge（需 HTTPS 或 localhost）；iOS 可使用 Bluefy 浏览器。没有设备时所有功能仍可在"预览模式"下试用，输出会显示在顶部示波器上。</div>
+  <div class="card">
+    <h2>设备连接 <small id="srcTag"></small></h2>
+    <div class="row">
+      <button id="btnConn" class="pri">搜索并连接设备</button>
+      <button id="btnConnAll">显示全部蓝牙设备</button>
+      <button id="btnDisc" hidden>断开</button>
+    </div>
+    <p class="h">默认只列出名称以 YCY 开头或带有 FF40 服务的设备（如 YCY-FJB-03）。连接后自动读取设备信息与电量，意外断线会自动重连。</p>
+    <div id="devInfo" class="h"></div>
+  </div>
+  <div class="card">
+    <h2>安全与上限 <small>所有玩法都受此限制</small></h2>
+    <div class="sl"><b class="cA">旋转伸缩上限</b><input type="range" id="capA" min="1" max="20"><output id="capAo"></output></div>
+    <div class="sl"><b class="cB">吮吸上限</b><input type="range" id="capB" min="1" max="20"><output id="capBo"></output></div>
+    <div class="sl"><b class="cC">震动上限</b><input type="range" id="capC" min="1" max="20"><output id="capCo"></output></div>
+    <div class="sl"><b>总强度</b><input type="range" id="gain" min="0" max="100"><output id="gaino"></output></div>
+    <div class="sl"><b>柔和上升</b><input type="range" id="rise" min="0" max="30"><output id="riseo"></output></div>
+    <div class="sl"><b>吮吸保护</b><input type="range" id="bGuard" min="3" max="30"><output id="bGuardo"></output></div>
+    <div class="row"><label>旋转方向</label><span class="seg" id="aDir"><button data-v="fwd">正转</button><button data-v="rev">反转</button><button data-v="alt">交替</button></span></div>
+    <p class="h">上限是设备档位（1–20）。"柔和上升"限制强度爬升速度，避免突然变强；"吮吸保护"在连续吸气超过设定秒数后强制放气一小段时间。任何时候按顶部<b>急停</b>、空格或 Esc 立即全部归零。</p>
+  </div>
+  <div class="card">
+    <h2>数据</h2>
+    <div class="row"><button id="btnExp">导出全部数据</button><button id="btnImp">导入</button><input type="file" id="impFile" accept=".json" hidden></div>
+    <details><summary>通信日志</summary><div id="log"></div></details>
+  </div>
+</section>
+
+<!-- ============ 手动 ============ -->
+<section id="t-man">
+  <div class="card">
+    <h2>速率控制</h2>
+    <div class="sl"><b class="cA">旋转伸缩</b><input type="range" id="mA" min="0" max="20" value="0"><output id="mAo">0</output></div>
+    <div class="sl"><b class="cB">吮吸</b><input type="range" id="mB" min="0" max="20" value="0"><output id="mBo">0</output></div>
+    <div class="sl"><b class="cC">震动</b><input type="range" id="mC" min="0" max="20" value="0"><output id="mCo">0</output></div>
+    <div class="row">
+      <button id="btnRand">随机漫游</button>
+      <button id="btnEdge">寸止</button>
+      <select id="edgeSec"><option value="5">5 秒</option><option value="10" selected>10 秒</option><option value="20">20 秒</option><option value="40">40 秒</option></select>
+    </div>
+    <p class="h">吮吸档位：0 = 放气，1 = 保持，2 以上 = 吸气。"寸止"会让所有输出暂停指定时间后再柔和恢复，对任何玩法都有效。</p>
+  </div>
+  <div class="card">
+    <h2>设备内建模式 <small>0 = 关闭</small></h2>
+    <div class="row">
+      <label class="mp"><b class="cA">旋转</b><select id="modeA"></select></label>
+      <label class="mp"><b class="cB">吮吸</b><select id="modeB"></select></label>
+      <label class="mp"><b class="cC">震动</b><select id="modeC"></select></label>
+    </div>
+    <p class="h">内建模式由设备固件自行运行，与速率控制二选一：某通道启用内建模式后，该通道的速率输出会置 0。</p>
+  </div>
+</section>
+
+<!-- ============ 波形 ============ -->
+<section id="t-wave">
+  <div class="card">
+    <h2>波形库</h2>
+    <div id="waveList"></div>
+    <div class="row"><button id="wNew" class="pri">新建波形</button><button id="wImp">导入波形</button><input type="file" id="wImpFile" accept=".json" hidden>
+      <label>播放速度</label><select id="wSpeed"><option>0.5</option><option>0.75</option><option selected>1</option><option>1.5</option><option>2</option></select></div>
+  </div>
+  <div class="card" id="edCard" hidden>
+    <h2>编辑器 <small>手指 / 鼠标直接在轨道上画</small></h2>
+    <div class="row"><input type="text" id="edName" placeholder="名称" style="flex:1;min-width:120px"><label>时长</label><input type="number" id="edDur" min="1" max="180" step="1" style="width:76px"><label>秒</label></div>
+    <div class="trk"><span class="cA">A 旋转伸缩</span><canvas id="edA"></canvas></div>
+    <div class="trk"><span class="cB">B 吮吸</span><canvas id="edB"></canvas></div>
+    <div class="trk"><span class="cC">C 震动</span><canvas id="edC"></canvas></div>
+    <div class="row">
+      <label>生成器 →</label><span class="seg" id="genCh"><button data-v="A" class="on">A</button><button data-v="B">B</button><button data-v="C">C</button></span>
+      <select id="genShape"><option value="sine">正弦</option><option value="tri">三角</option><option value="saw">锯齿</option><option value="pulse">脉冲</option><option value="beat">心跳</option><option value="ramp">渐强</option><option value="rand">随机</option><option value="zero">清零</option></select>
+      <label>周期数</label><input type="number" id="genN" value="4" min="1" max="60" style="width:66px">
+      <label>低</label><input type="number" id="genLo" value="10" min="0" max="100" style="width:62px"><label>高</label><input type="number" id="genHi" value="80" min="0" max="100" style="width:62px">
+      <button id="genGo">填充</button><button id="genSmooth">平滑</button>
+    </div>
+    <div class="row"><button id="edSave" class="pri">保存</button><button id="edPlay">试播</button><button id="edClose">关闭</button></div>
+  </div>
+</section>
+
+<!-- ============ 玩法 ============ -->
+<section id="t-play">
+  <div class="card">
+    <h2>触控板 <small>在面板上滑动</small></h2>
+    <canvas id="pad"></canvas>
+    <div class="row" id="padMap"></div>
+    <div class="row"><label>松手后</label><span class="seg" id="padRel"><button data-v="zero">归零</button><button data-v="fade">缓降</button><button data-v="hold">保持</button></span><button id="padGo">启用触控板</button></div>
+  </div>
+  <div class="card">
+    <h2>飞行游戏 <small>按住上升，松开下降</small></h2>
+    <canvas id="game"></canvas>
+    <div class="row"><button id="gameGo">开始游戏</button><span class="tag" id="gameInfo">高度 → 震动 · 热度 → 旋转 · 吃到光球 → 吮吸</span></div>
+    <p class="h">沿着隧道飞，吃光球累积热度；撞墙会触发 3 秒寸止并损失一半热度。</p>
+  </div>
+  <div class="card">
+    <h2>体感倾斜</h2>
+    <div class="row" id="tiltMap"></div>
+    <div class="row"><button id="tiltGo">启用体感</button><span class="tag" id="tiltInfo">需要带陀螺仪的手机</span></div>
+  </div>
+  <div class="card">
+    <h2>声音律动 <small>跟随麦克风 / 音乐</small></h2>
+    <div class="row" id="micMap"></div>
+    <div class="sl"><b>灵敏度</b><input type="range" id="micSens" min="5" max="60" value="20"><output id="micSenso"></output></div>
+    <div class="row"><button id="micGo">启用麦克风</button></div>
+  </div>
+</section>
+
+<!-- ============ 拟合 ============ -->
+<section id="t-fit">
+  <div class="card">
+    <h2>拟合最舒适波形</h2>
+    <p class="h">每一轮播放一组候选设定，你凭感觉打分。后台用高斯过程模型学习你的偏好，在"探索新区域"和"精修当前最优"之间自动权衡，可以无限轮地继续，数据自动保存，随时可以接着测。</p>
+    <div class="row"><label>参与通道</label><span class="seg" id="tAct"><button data-v="A">旋转</button><button data-v="B">吮吸</button><button data-v="C">震动</button></span></div>
+    <div class="sl"><b>探索倾向</b><input type="range" id="tExp" min="0" max="100"><output id="tExpo"></output></div>
+    <div class="row"><button id="tGo" class="pri">开始 / 继续</button><button id="tBest">播放当前最优</button><button id="tSave">最优存为波形</button><button id="tReset">重置</button></div>
+  </div>
+  <div class="card" id="tLive" hidden>
+    <h2>第 <span id="tNo">1</span> 轮 <small id="tWhy"></small></h2>
+    <p class="h" id="tDesc"></p>
+    <div class="rate" id="tRate"></div>
+    <p class="h" style="display:flex;justify-content:space-between"><span>1 = 很不舒服</span><span>10 = 非常舒服</span></p>
+    <div class="row"><label>哪里太强？</label><button data-hot="A" class="cA">旋转太强</button><button data-hot="B" class="cB">吮吸太强</button><button data-hot="C" class="cC">震动太强</button><span class="sp"></span><button id="tSkip">跳过</button></div>
+    <details id="tTweakBox"><summary>手动微调当前这组参数（改完再打分，同样计入学习）</summary><div id="tTweak"></div></details>
+  </div>
+  <div class="card">
+    <h2>学习进度</h2>
+    <div class="stat"><div><b id="sN">0</b><small>已测轮数</small></div><div><b id="sMax">–</b><small>最高评分</small></div><div><b id="sPred">–</b><small>预测最优</small></div><div><b id="sConf">–</b><small>模型把握</small></div></div>
+    <canvas id="tChart" style="margin-top:10px"></canvas>
+    <p class="h">圆点 = 每轮评分，绿线 = 模型认为的最优值。<span id="tCeil"></span></p>
+  </div>
+</section>
+</main>
+
+<nav id="nav">
+  <button data-t="dev" class="on"><i>◉</i>设备</button>
+  <button data-t="man"><i>☰</i>手动</button>
+  <button data-t="wave"><i>∿</i>波形</button>
+  <button data-t="play"><i>✦</i>玩法</button>
+  <button data-t="fit"><i>◎</i>拟合</button>
+</nav>
+
+<script>
+'use strict';
+/* ================= 基础 ================= */
+const $=id=>document.getElementById(id), CH=['A','B','C'], CHN={A:'旋转伸缩',B:'吮吸',C:'震动'}, COL={A:'#ff8a5c',B:'#4cc9f0',C:'#c792ea'};
+const clamp=(v,a=0,b=1)=>v<a?a:v>b?b:v, nowS=()=>performance.now()/1000, uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const KEY='ycy.workshop.v1';
+const DEF={caps:{A:10,B:10,C:10},gain:100,rise:6,bGuard:8,aDir:'fwd',waves:null,map:{},padRel:'fade',
+  tuner:{obs:[],ceil:{A:1,B:1,C:1},act:{A:true,B:true,C:true},exp:45,tr:.25}};
+let S=JSON.parse(JSON.stringify(DEF));
+try{const j=JSON.parse(localStorage.getItem(KEY)||'null');if(j){S=Object.assign(S,j);S.tuner=Object.assign(JSON.parse(JSON.stringify(DEF.tuner)),j.tuner||{})}}catch(e){}
+let saveT=0;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}},300)}
+function log(m){const el=$('log');el.textContent=(new Date().toLocaleTimeString()+' '+m+'\n'+el.textContent).slice(0,6000)}
+function seg(id,get,set){const el=$(id),upd=()=>el.querySelectorAll('button').forEach(b=>b.classList.toggle('on',get(b.dataset.v)));
+  el.addEventListener('click',e=>{const b=e.target.closest('button');if(b){set(b.dataset.v);upd();save()}});upd();return upd}
+function fitCanvas(cv){const r=cv.getBoundingClientRect(),d=Math.min(2,devicePixelRatio||1);if(!r.width)return null;
+  if(cv.width!==Math.round(r.width*d)||cv.height!==Math.round(r.height*d)){cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d)}
+  const g=cv.getContext('2d');g.setTransform(d,0,0,d,0,0);return{g,w:r.width,h:r.height}}
+
+/* ================= 蓝牙协议 (YCY-FJB) =================
+   服务 FF40 / 写 FF41 / 通知 FF42；包 = 0x35, 命令, 数据…, 校验(各字节求和 & 0xFF)
+   0x10 查询设备信息   0x11 内建模式 [通道码 A=0x01 B=0x12 C=0x14, 模式0-7]
+   0x12 速率 [A 0-40(1-20正转,21-40反转), B 0-20(0放气,1保持,2+吸气), C 0-20]
+   0x13 电量上报       0x14 心跳 */
+const SVC=0xff40,WR=0xff41,NT=0xff42,MCODE={A:0x01,B:0x12,C:0x14};
+const pkt=(cmd,...d)=>{const a=[0x35,cmd,...d];a.push(a.reduce((s,x)=>s+x,0)&255);return new Uint8Array(a)};
+const ble={dev:null,wr:null,chain:Promise.resolve(),sentKey:'',pending:false,manual:false,info:null};
+function setConn(t,on){$('conn').textContent=t;$('conn').classList.toggle('on',!!on);$('btnDisc').hidden=!ble.dev}
+function bleWrite(buf){ble.chain=ble.chain.then(async()=>{if(!ble.wr)return;
+  if(ble.wr.properties.writeWithoutResponse&&ble.wr.writeValueWithoutResponse)await ble.wr.writeValueWithoutResponse(buf);
+  else if(ble.wr.writeValueWithResponse)await ble.wr.writeValueWithResponse(buf);else await ble.wr.writeValue(buf)}).catch(e=>log('写入失败: '+e.message));return ble.chain}
+function onNotify(e){const d=new Uint8Array(e.target.value.buffer);if(d.length<3||d[0]!==0x35)return;
+  if(d[d.length-1]!==(d.slice(0,-1).reduce((s,x)=>s+x,0)&255))return log('校验和不匹配');
+  if(d[1]===0x10&&d.length>=7){ble.info={pid:d[2],ver:d[3],modes:{A:d[4],B:d[5],C:d[6]}};showInfo()}
+  else if(d[1]===0x13&&d[2]===0x01){const b=$('batt');b.hidden=false;b.textContent='电量 '+d[3]+'%';b.style.color=d[3]<=10?'var(--bad)':d[3]<=30?'var(--warn)':''}
+  else if(d[1]!==0x14)log('未知通知: '+[...d].map(x=>x.toString(16).padStart(2,'0')).join(' '))}
+function showInfo(){const i=ble.info;$('devInfo').textContent=ble.dev?('设备：'+(ble.dev.name||'未命名')+(i?` · 产品ID ${i.pid} · 固件 ${i.ver} · 内建模式数 A${i.modes.A}/B${i.modes.B}/C${i.modes.C}`:'')):'';
+  CH.forEach(c=>{const n=i&&i.modes[c]?i.modes[c]:7,el=$('mode'+c),v=el.value;el.innerHTML='';for(let k=0;k<=n;k++)el.add(new Option(k?'模式 '+k:'关闭',k));el.value=v&&v<=n?v:0})}
+async function gattUp(){const srv=await ble.dev.gatt.connect(),svc=await srv.getPrimaryService(SVC);
+  const wr=await svc.getCharacteristic(WR),nt=await svc.getCharacteristic(NT);
+  nt.addEventListener('characteristicvaluechanged',onNotify);await nt.startNotifications();
+  ble.wr=wr;ble.sentKey='';setConn(ble.dev.name||'已连接',true);log('已连接 '+(ble.dev.name||''));showInfo();
+  await bleWrite(pkt(0x12,0,0,0));await bleWrite(pkt(0x10))}
+async function connect(all){if(!navigator.bluetooth)return alert('此浏览器不支持 Web Bluetooth');
+  try{const dev=await navigator.bluetooth.requestDevice(all?{acceptAllDevices:true,optionalServices:[SVC]}:{filters:[{namePrefix:'YCY'},{services:[SVC]}],optionalServices:[SVC]});
+    if(ble.dev&&ble.dev!==dev)await disconnect();
+    ble.dev=dev;ble.manual=false;dev.addEventListener('gattserverdisconnected',onDisc);setConn('连接中…');await gattUp()}
+  catch(e){if(e.name!=='NotFoundError'){log('连接失败: '+e.message);alert('连接失败：'+e.message+(all?'\n该设备可能不是受支持的 YCY 设备（缺少 FF40 服务）。':''))}if(!ble.wr){setConn('未连接')}}}
+async function onDisc(){ble.wr=null;stopAll();log('连接断开');if(ble.manual||!ble.dev)return setConn('未连接');
+  for(let i=1;i<=5&&ble.dev&&!ble.manual;i++){setConn('重连中 '+i+'/5');await new Promise(r=>setTimeout(r,800*i));try{await gattUp();return}catch(e){}}
+  setConn('未连接')}
+async function disconnect(){ble.manual=true;stopAll();if(ble.wr){await bleWrite(pkt(0x12,0,0,0));for(const c of CH)await bleWrite(pkt(0x11,MCODE[c],0))}
+  try{ble.dev&&ble.dev.gatt.disconnect()}catch(e){}ble.wr=null;ble.dev=null;$('batt').hidden=true;setConn('未连接');showInfo()}
+
+/* ================= 输出级：信号源 → 限幅/柔化/保护 → 设备档位 ================= */
+const SRC={},SRCN={manual:'手动',random:'随机漫游',wave:'波形播放',pad:'触控板',game:'飞行游戏',tilt:'体感',mic:'声音律动',tuner:'拟合'};
+const out={src:null,sm:{A:0,B:0,C:0},dev:[0,0,0],pauseUntil:0,hist:[],mode:{A:0,B:0,C:0},bOn:0,bRest:0,aRev:false,aFlipT:0,last:nowS()};
+const rec={on:false,d:null,acc:0};
+function setSource(n){if(out.src===n)return;const p=out.src;out.src=n;if(p&&SRC[p]&&SRC[p].stop)SRC[p].stop();
+  $('srcTag').textContent=n?'当前：'+SRCN[n]:'';uiSrc();if(n)wake()}
+function stopAll(){setSource(null);CH.forEach(c=>{out.sm[c]=0;$('m'+c).value=0;$('m'+c+'o').textContent=0;if(out.mode[c])setMode(c,0)});out.pauseUntil=0;tick()}
+function setMode(c,v){v=+v;out.mode[c]=v;$('mode'+c).value=v;bleWrite(pkt(0x11,MCODE[c],v));log(`内建模式 ${c}=${v}`)}
+let wl=null;async function wake(){try{if(!wl&&navigator.wakeLock){wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>wl=null)}}catch(e){}}
+function tick(){const t=nowS(),dt=Math.min(.25,t-out.last);out.last=t;
+  let l={A:0,B:0,C:0};const s=out.src&&SRC[out.src];if(s){const r=s.sample(t,dt);if(r)l=r}
+  const paused=t<out.pauseUntil,rise=S.rise/10;
+  for(const c of CH){let v=paused?0:clamp(+l[c]||0)*S.gain/100;const cur=out.sm[c];
+    out.sm[c]=v>cur?(rise>0?Math.min(v,cur+dt/rise):v):Math.max(v,cur-dt/.12)}
+  if(rec.on){rec.acc+=dt;while(rec.acc>=.1){rec.acc-=.1;CH.forEach(c=>rec.d[c].push(Math.round(out.sm[c]*100)/100));if(rec.d.A.length>=1800){toggleRec();break}}}
+  // A：方向
+  let a=out.mode.A?0:Math.round(out.sm.A*S.caps.A);
+  if(S.aDir==='alt'){if(a===0&&t-out.aFlipT>1.5||t-out.aFlipT>12){out.aRev=!out.aRev;out.aFlipT=t}}else out.aRev=S.aDir==='rev';
+  const aDev=a&&out.aRev?20+a:a;
+  // B：0放气 1保持 2+吸气；连续吸气保护
+  let b=out.mode.B?0:(out.sm.B<.03?0:Math.max(1,Math.round(out.sm.B*S.caps.B)));
+  if(t<out.bRest)b=0;else if(b>=2){if(!out.bOn)out.bOn=t;else if(t-out.bOn>S.bGuard){out.bRest=t+clamp((t-out.bOn)*.6,.5,3);out.bOn=0;b=0}}else out.bOn=0;
+  const cc=out.mode.C?0:Math.round(out.sm.C*S.caps.C);
+  out.dev=[aDev,b,cc];out.hist.push([a/20,b/20,cc/20]);if(out.hist.length>240)out.hist.shift();
+  const key=out.dev.join();if(ble.wr&&key!==ble.sentKey&&!ble.pending){ble.pending=true;ble.sentKey=key;bleWrite(pkt(0x12,...out.dev)).then(()=>ble.pending=false)}
+  $('roA').textContent=(out.aRev&&a?'-':'')+a;$('roB').textContent=b;$('roC').textContent=cc}
+setInterval(tick,50);
+function drawScope(){const f=fitCanvas($('scope'));if(f){const{g,w,h}=f;g.clearRect(0,0,w,h);const n=out.hist.length;
+  CH.forEach((c,i)=>{g.beginPath();g.strokeStyle=COL[c];g.lineWidth=1.6;for(let k=0;k<n;k++){const x=w-(n-1-k)*w/239,y=h-3-out.hist[k][i]*(h-6);k?g.lineTo(x,y):g.moveTo(x,y)}g.stroke()});
+  if(nowS()<out.pauseUntil){g.fillStyle='#ffc857';g.font='12px sans-serif';g.fillText('寸止 '+Math.ceil(out.pauseUntil-nowS())+'s',8,16)}}
+  requestAnimationFrame(drawScope)}
+function toggleRec(){if(!rec.on){rec.on=true;rec.acc=0;rec.d={A:[],B:[],C:[]};$('recBtn').classList.add('on');$('recBtn').textContent='■ 停止录制'}
+  else{rec.on=false;$('recBtn').classList.remove('on');$('recBtn').textContent='● 录制';const n=rec.d.A.length;if(n<10)return;
+    const w={id:uid(),name:'录制 '+new Date().toLocaleTimeString().slice(0,5),dur:n/10,tr:rec.d};S.waves.push(w);save();renderWaves();openEd(w);showTab('wave')}}
+
+/* ================= 手动 / 随机 ================= */
+SRC.manual={sample:()=>({A:$('mA').value/S.caps.A,B:$('mB').value/S.caps.B,C:$('mC').value/S.caps.C})};
+const rnd={cur:{A:0,B:0,C:0},tg:{A:0,B:0,C:0},next:0};
+SRC.random={sample(t,dt){if(t>rnd.next){rnd.next=t+3+Math.random()*8;CH.forEach(c=>rnd.tg[c]=Math.random()<.15?0:.2+.8*Math.random())}
+  CH.forEach(c=>rnd.cur[c]+=(rnd.tg[c]-rnd.cur[c])*Math.min(1,dt*1.5));return rnd.cur},stop(){rnd.next=0;CH.forEach(c=>rnd.cur[c]=0)}};
+
+/* ================= 波形 ================= */
+const SR=10;
+function shapeFn(k,p){p-=Math.floor(p);switch(k){case'sine':return .5-.5*Math.cos(2*Math.PI*p);case'tri':return p<.5?2*p:2-2*p;case'saw':return p;case'pulse':return p<.5?1:0;
+  case'beat':return Math.max(Math.exp(-((p-.12)**2)/.004),.7*Math.exp(-((p-.36)**2)/.006));default:return 0}}
+function genTrack(dur,k,n,lo,hi){const N=Math.round(dur*SR),a=[];let r=Math.random();
+  for(let i=0;i<N;i++){const u=i/N;let v;if(k==='zero'){a.push(0);continue}
+    if(k==='ramp')v=u;else if(k==='rand'){if(i%Math.max(1,Math.round(N/n/2))===0)r=Math.random();v=r}else v=shapeFn(k,u*n);
+    a.push(Math.round((lo+(hi-lo)*v)*100)/100)}return a}
+function mkWave(name,dur,a,b,c){return{id:uid(),name,dur,tr:{A:genTrack(dur,...a),B:genTrack(dur,...b),C:genTrack(dur,...c)}}}
+if(!S.waves)S.waves=[mkWave('潮汐',16,['sine',2,.15,.8],['sine',4,0,.6],['sine',2,.3,.7]),mkWave('心跳',8,['tri',1,.3,.5],['pulse',4,0,.7],['beat',8,.1,1]),
+  mkWave('阶梯攀升',24,['ramp',1,.1,1],['saw',6,0,.8],['ramp',1,.2,1]),mkWave('脉冲雨',10,['pulse',5,.2,.7],['pulse',10,0,.8],['saw',20,.2,.9]),mkWave('慢摇',20,['sine',1,.2,.6],['zero',1,0,0],['sine',5,.2,.6])];
+function sampleWave(w,t){const N=w.tr.A.length,p=((t%w.dur)+w.dur)%w.dur*N/w.dur,i=Math.floor(p)%N,j=(i+1)%N,f=p-Math.floor(p),o={};
+  CH.forEach(c=>o[c]=w.tr[c][i]*(1-f)+w.tr[c][j]*f);return o}
+const WP={w:null,t0:0};
+SRC.wave={sample(t){return WP.w?sampleWave(WP.w,(t-WP.t0)*+$('wSpeed').value):null},stop(){WP.w=null;renderWaves()}};
+function playWave(w){if(out.src==='wave'&&WP.w&&WP.w.id===w.id){setSource(null);return}WP.w=w;WP.t0=nowS();if(out.src!=='wave')setSource('wave');renderWaves()}
+function renderWaves(){const el=$('waveList');el.innerHTML='';S.waves.forEach(w=>{const d=document.createElement('div');d.className='wl';const N=w.tr.A.length,st=Math.max(1,Math.floor(N/60));
+  const pl=c=>{let p='';for(let i=0;i<N;i+=st)p+=`${(i/N*92).toFixed(1)},${(32-w.tr[c][i]*30).toFixed(1)} `;return`<polyline fill="none" stroke="${COL[c]}" stroke-width="1.2" points="${p}"/>`};
+  const playing=out.src==='wave'&&WP.w&&WP.w.id===w.id;
+  d.innerHTML=`<svg viewBox="0 0 92 34">${CH.map(pl).join('')}</svg><div class="nm"></div><button data-a="play" class="${playing?'on':''}">${playing?'停止':'播放'}</button><button data-a="edit">编辑</button><button data-a="more">⋯</button>`;
+  d.querySelector('.nm').innerHTML='<span></span><small>'+w.dur+' 秒</small>';d.querySelector('.nm span').textContent=w.name;
+  d.onclick=e=>{const a=e.target.dataset.a;if(a==='play')playWave(w);else if(a==='edit')openEd(w);else if(a==='more'){
+    const r=prompt('输入操作：\n1 = 复制\n2 = 导出文件\n3 = 删除','1');
+    if(r==='1'){S.waves.push(Object.assign(JSON.parse(JSON.stringify(w)),{id:uid(),name:w.name+' 副本'}))}
+    else if(r==='2')download(w.name+'.ycywave.json',JSON.stringify(w));
+    else if(r==='3'&&confirm('删除「'+w.name+'」？')){S.waves=S.waves.filter(x=>x!==w);if(WP.w===w)setSource(null)}
+    save();renderWaves()}};el.appendChild(d)})}
+function download(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+function validWave(w){return w&&w.tr&&CH.every(c=>Array.isArray(w.tr[c])&&w.tr[c].length>1&&w.tr[c].length===w.tr.A.length)&&w.dur>0}
+// 编辑器
+let ED=null,genCh='A';
+function resample(a,N){const o=[];for(let i=0;i<N;i++){const p=i*(a.length)/N,k=Math.floor(p),f=p-k;o.push(Math.round((a[k%a.length]*(1-f)+a[(k+1)%a.length]*f)*100)/100)}return o}
+function openEd(w){ED=JSON.parse(JSON.stringify(w));$('edCard').hidden=false;$('edName').value=ED.name;$('edDur').value=ED.dur;drawEd();$('edCard').scrollIntoView({behavior:'smooth',block:'start'})}
+function drawEd(){if(!ED)return;CH.forEach(c=>{const f=fitCanvas($('ed'+c));if(!f)return;const{g,w,h}=f,a=ED.tr[c],N=a.length;g.clearRect(0,0,w,h);
+  g.strokeStyle='#1c2029';g.lineWidth=1;for(let s=1;s<ED.dur;s++){if(ED.dur>40&&s%5)continue;const x=s/ED.dur*w;g.beginPath();g.moveTo(x,0);g.lineTo(x,h);g.stroke()}
+  g.beginPath();g.moveTo(0,h);for(let i=0;i<N;i++)g.lineTo((i+.5)/N*w,h-a[i]*(h-4)-2);g.lineTo(w,h);g.closePath();g.fillStyle=COL[c]+'44';g.fill();
+  g.beginPath();for(let i=0;i<N;i++){const x=(i+.5)/N*w,y=h-a[i]*(h-4)-2;i?g.lineTo(x,y):g.moveTo(x,y)}g.strokeStyle=COL[c];g.lineWidth=2;g.stroke();
+  if(out.src==='wave'&&WP.w&&WP.w.id===ED.id){const x=(((nowS()-WP.t0)*+$('wSpeed').value)%ED.dur)/ED.dur*w;g.strokeStyle='#fff';g.lineWidth=1;g.beginPath();g.moveTo(x,0);g.lineTo(x,h);g.stroke()}})}
+CH.forEach(c=>{const cv=$('ed'+c);let last=null;const pos=e=>{const r=cv.getBoundingClientRect();return[clamp((e.clientX-r.left)/r.width,0,.9999),clamp(1-(e.clientY-r.top-2)/(r.height-4))]};
+  const put=e=>{if(!ED)return;const[x,y]=pos(e),N=ED.tr[c].length,i=Math.floor(x*N);if(last){const[i0,y0]=last,s=i>i0?1:-1;for(let k=i0;k!==i;k+=s)ED.tr[c][k]=Math.round((y0+(y-y0)*(k-i0)/(i-i0))*100)/100}
+    ED.tr[c][i]=Math.round(y*100)/100;last=[i,y];drawEd();if(out.src==='wave'&&WP.w&&WP.w.id===ED.id)WP.w=ED};
+  cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);last=null;put(e)});cv.addEventListener('pointermove',e=>{if(e.buttons||e.pointerType==='touch')if(last)put(e)});
+  cv.addEventListener('pointerup',()=>last=null);cv.addEventListener('pointercancel',()=>last=null)});
+setInterval(()=>{if(ED&&out.src==='wave'&&!$('t-wave').hidden)drawEd()},100);
+
+/* ================= 通道映射（玩法通用） ================= */
+function mapper(elId,key,inputs,def){if(!S.map[key])S.map[key]=def;const el=$(elId);
+  el.innerHTML=CH.map(c=>`<label class="mp"><b class="c${c}">${CHN[c]}</b><select data-c="${c}"><option value="">关</option>${Object.entries(inputs).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label>`).join('');
+  el.querySelectorAll('select').forEach(s=>{s.value=S.map[key][s.dataset.c]||'';s.onchange=()=>{S.map[key][s.dataset.c]=s.value;save()}});
+  return v=>({A:v[S.map[key].A]||0,B:v[S.map[key].B]||0,C:v[S.map[key].C]||0})}
+function uiSrc(){[['padGo','pad','启用触控板'],['gameGo','game','开始游戏'],['tiltGo','tilt','启用体感'],['micGo','mic','启用麦克风'],['btnRand','random','随机漫游']].forEach(([b,s,t])=>{$(b).classList.toggle('on',out.src===s);$(b).textContent=out.src===s?'停止':t});
+  $('tLive').hidden=out.src!=='tuner'||!TU.cur||TU.cur.best;renderWaves()}
+
+/* ---- 触控板 ---- */
+const pad={v:{x:0,y:0,d:0,s:0},down:false,trail:[],lx:0,ly:0,lt:0};
+const padMap=mapper('padMap','pad',{x:'X 轴（左→右）',y:'Y 轴（下→上）',d:'离中心距离',s:'滑动速度'},{A:'x',B:'s',C:'y'});
+SRC.pad={sample(t,dt){if(!pad.down){if(S.padRel==='zero')pad.v={x:0,y:0,d:0,s:0};else if(S.padRel==='fade'){const k=Math.exp(-dt*1.2);for(const i in pad.v)pad.v[i]*=k}}
+  pad.v.s*=Math.exp(-dt*2.5);return padMap(pad.v)},stop(){pad.down=false;pad.v={x:0,y:0,d:0,s:0}}};
+(()=>{const cv=$('pad');const mv=e=>{const r=cv.getBoundingClientRect(),x=clamp((e.clientX-r.left)/r.width),y=clamp(1-(e.clientY-r.top)/r.height),t=nowS();
+  if(pad.lt){const sp=Math.hypot(x-pad.lx,y-pad.ly)/Math.max(.008,t-pad.lt);pad.v.s=clamp(Math.max(pad.v.s,sp/2.5))}
+  pad.lx=x;pad.ly=y;pad.lt=t;pad.v.x=x;pad.v.y=y;pad.v.d=clamp(Math.hypot(x-.5,y-.5)*2);pad.trail.push([x,y,t]);if(pad.trail.length>60)pad.trail.shift()};
+  cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);if(out.src!=='pad')setSource('pad');pad.down=true;pad.lt=0;mv(e)});
+  cv.addEventListener('pointermove',e=>{if(pad.down)mv(e)});const up=()=>{pad.down=false};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up)})();
+function drawPad(){const f=fitCanvas($('pad'));if(!f)return;const{g,w,h}=f,t=nowS();g.clearRect(0,0,w,h);g.strokeStyle='#1c2029';g.beginPath();g.moveTo(w/2,0);g.lineTo(w/2,h);g.moveTo(0,h/2);g.lineTo(w,h/2);g.stroke();
+  pad.trail=pad.trail.filter(p=>t-p[2]<1);pad.trail.forEach(p=>{g.beginPath();g.fillStyle=`rgba(110,231,183,${1-(t-p[2])})`;g.arc(p[0]*w,(1-p[1])*h,5+8*(1-(t-p[2])),0,7);g.fill()});
+  if(out.src==='pad'){g.beginPath();g.strokeStyle='#6ee7b7';g.lineWidth=2;g.arc(pad.v.x*w,(1-pad.v.y)*h,16,0,7);g.stroke()}
+  else{g.fillStyle='#8b93a3';g.font='14px sans-serif';g.textAlign='center';g.fillText('触摸此处开始',w/2,h/2-10);g.textAlign='left'}}
+
+/* ---- 飞行游戏 ---- */
+const G={y:.5,vy:0,heat:0,score:0,x:0,hold:false,crash:0,burst:0,orbs:[],nextOrb:2,o:{A:0,B:0,C:0},lt:0};
+const tun=x=>.5+.26*Math.sin(x*.9)+.1*Math.sin(x*2.3+1), tunW=()=>Math.max(.15,.3-G.score*.0006);
+SRC.game={sample:()=>G.o,stop(){G.hold=false;G.o={A:0,B:0,C:0}}};
+function gameStep(){const t=nowS(),dt=Math.min(.05,t-G.lt||0);G.lt=t;if(out.src!=='game')return;
+  if(t<G.crash){G.o={A:0,B:0,C:0};return}
+  G.x+=(.55+G.heat*.6)*dt;G.vy+=(G.hold?1.3:-1.3)*dt;G.vy*=.97;G.y+=G.vy*dt;G.heat=Math.min(1,G.heat+dt*.008);G.burst=Math.max(0,G.burst-dt*.8);G.score+=dt*2;
+  while(G.nextOrb<G.x+3){G.orbs.push([G.nextOrb,tun(G.nextOrb)+(Math.random()-.5)*tunW()*1.1]);G.nextOrb+=1+Math.random()}
+  const px=G.x+.75;G.orbs=G.orbs.filter(o=>{if(Math.abs(o[0]-px)<.07&&Math.abs(o[1]-G.y)<.08){G.score+=10;G.heat=Math.min(1,G.heat+.07);G.burst=1;return false}return o[0]>G.x-.2});
+  if(G.score>4&&Math.abs(G.y-tun(px))>tunW()){G.crash=t+3;G.heat*=.5;G.y=tun(px);G.vy=0;out.pauseUntil=t+3}
+  G.o={A:G.heat,B:G.burst,C:clamp(.15+.85*G.y)}}
+function drawGame(){gameStep();const f=fitCanvas($('game'));if(!f)return;const{g,w,h}=f,span=3;g.clearRect(0,0,w,h);const hw=tunW();
+  g.fillStyle='#161a22';g.beginPath();for(let i=0;i<=60;i++){const x=G.x+i/60*span;g.lineTo(i/60*w,(1-(tun(x)+hw))*h)}for(let i=60;i>=0;i--){const x=G.x+i/60*span;g.lineTo(i/60*w,(1-(tun(x)-hw))*h)}g.fill();
+  G.orbs.forEach(o=>{g.beginPath();g.fillStyle='#ffc857';g.arc((o[0]-G.x)/span*w,(1-o[1])*h,6,0,7);g.fill()});
+  g.beginPath();g.fillStyle=nowS()<G.crash?'#ff4d6d':'#6ee7b7';g.arc(.25*w,(1-G.y)*h,9,0,7);g.fill();
+  g.fillStyle='#e8eaf0';g.font='13px sans-serif';g.fillText(`分数 ${Math.floor(G.score)}   热度 ${Math.round(G.heat*100)}%`,10,18);
+  if(out.src!=='game'){g.fillStyle='#8b93a3';g.textAlign='center';g.fillText('点击「开始游戏」',w/2,h/2);g.textAlign='left'}else if(nowS()<G.crash){g.fillStyle='#ffc857';g.textAlign='center';g.fillText('撞墙！寸止中…',w/2,h/2);g.textAlign='left'}}
+(()=>{const cv=$('game');cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);G.hold=true});['pointerup','pointercancel'].forEach(n=>cv.addEventListener(n,()=>G.hold=false))})();
+
+/* ---- 体感 ---- */
+const tilt={v:{fb:0,lr:0,sh:0},on:false};
+const tiltMap=mapper('tiltMap','tilt',{fb:'前后倾斜',lr:'左右倾斜',sh:'摇晃'},{A:'lr',B:'sh',C:'fb'});
+SRC.tilt={sample(t,dt){tilt.v.sh*=Math.exp(-dt*2);return tiltMap(tilt.v)},stop(){}};
+function onOri(e){tilt.v.fb=clamp(Math.abs(e.beta||0)/70);tilt.v.lr=clamp(Math.abs(e.gamma||0)/55);$('tiltInfo').textContent=`前后 ${Math.round(tilt.v.fb*100)}% · 左右 ${Math.round(tilt.v.lr*100)}%`}
+function onMot(e){const a=e.acceleration;if(a&&a.x!=null)tilt.v.sh=Math.max(tilt.v.sh,clamp(Math.hypot(a.x,a.y,a.z)/14))}
+async function startTilt(){try{if(typeof DeviceOrientationEvent!=='undefined'&&DeviceOrientationEvent.requestPermission){if(await DeviceOrientationEvent.requestPermission()!=='granted')return alert('未获得体感权限')}
+  if(!tilt.on){addEventListener('deviceorientation',onOri);addEventListener('devicemotion',onMot);tilt.on=true}setSource('tilt')}catch(e){alert('无法启用体感：'+e.message)}}
+
+/* ---- 声音 ---- */
+const mic={an:null,buf:null,v:{vol:0,bass:0,hi:0},ctx:null,stream:null};
+const micMap=mapper('micMap','mic',{vol:'总音量',bass:'低音',hi:'高音'},{A:'bass',B:'hi',C:'vol'});
+SRC.mic={sample(t,dt){if(!mic.an)return null;mic.an.getByteFrequencyData(mic.buf);const hz=mic.ctx.sampleRate/mic.an.fftSize,band=(a,b)=>{let s=0,n=0;for(let i=Math.max(1,Math.floor(a/hz));i<Math.min(mic.buf.length,b/hz);i++){s+=mic.buf[i];n++}return n?s/n/255:0};
+  const k=+$('micSens').value/10,tg={vol:band(60,6000)*k,bass:band(40,250)*k*.8,hi:band(2000,9000)*k*1.6};
+  for(const i in tg){const x=clamp(tg[i]);mic.v[i]=x>mic.v[i]?x:mic.v[i]+(x-mic.v[i])*Math.min(1,dt*4)}return micMap(mic.v)},
+  stop(){if(mic.stream)mic.stream.getTracks().forEach(t=>t.stop());if(mic.ctx)mic.ctx.close();mic.an=mic.stream=mic.ctx=null}};
+async function startMic(){try{mic.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+  mic.ctx=new(window.AudioContext||window.webkitAudioContext)();mic.an=mic.ctx.createAnalyser();mic.an.fftSize=1024;mic.an.smoothingTimeConstant=.5;mic.buf=new Uint8Array(mic.an.frequencyBinCount);
+  mic.ctx.createMediaStreamSource(mic.stream).connect(mic.an);setSource('mic')}catch(e){alert('无法使用麦克风：'+e.message)}}
+
+/* ================= 拟合：高斯过程贝叶斯优化 =================
+   12 维参数 → 三通道波形函数；用户评分 → GP 回归（Matérn 5/2，边际似然选超参，
+   旧样本噪声随时间放大以适应感受漂移）→ UCB 采集函数在全局随机点 + 信赖域局部扰动中选下一组。 */
+const PN=['旋转·强度','旋转·起伏','吮吸·强度','吮吸·起伏','震动·强度','震动·起伏','节奏周期','波形形状','吮吸相位','震动相位','渐强幅度','渐强长度'],D=12,BASE={A:0,B:2,C:4};
+const SHP=['sine','tri','saw','pulse'];
+function morph(s,p){const u=clamp(s)*2.999,i=Math.floor(u),f=u-i;return shapeFn(SHP[i],p)*(1-f)+shapeFn(SHP[i+1],p)*f}
+const pPeriod=x=>.8*Math.pow(15,x[6]), pCycles=x=>Math.round(2+x[11]*10);
+function pf(x,t){const P=pPeriod(x),env=1-x[10]*(.5+.5*Math.cos(2*Math.PI*t/(P*pCycles(x)))),ph=t/P,
+  ch=(b,d,s)=>(b*(1-d)+b*d*morph(x[7],ph+s))*env;return{A:ch(x[0],x[1],0),B:ch(x[2],x[3],x[8]),C:ch(x[4],x[5],x[9])}}
+function sane(x){const T=S.tuner;x=x.map(v=>clamp(v));CH.forEach(c=>{const i=BASE[c];if(!T.act[c]){x[i]=0;x[i+1]=0}else x[i]=Math.min(x[i],T.ceil[c])});
+  if(!T.act.B)x[8]=.5;if(!T.act.C)x[9]=.5;return x.map(v=>Math.round(v*1000)/1000)}
+const PRIMES=[2,3,5,7,11,13,17,19,23,29,31,37];function halton(i,b){let f=1,r=0;while(i>0){f/=b;r+=f*(i%b);i=Math.floor(i/b)}return r}
+function describe(x){const sh=['圆润','三角','锯齿','脉冲'][Math.round(clamp(x[7])*3)];return`周期 ${pPeriod(x).toFixed(1)}s · ${sh} · `+CH.filter(c=>S.tuner.act[c]).map(c=>`${CHN[c]} ${Math.round(x[BASE[c]]*100)}%`).join(' / ')+(x[10]>.15?` · 渐强 ${Math.round(x[10]*100)}%`:'')}
+// --- 线性代数 ---
+function chol(A,n){for(let i=0;i<n;i++)for(let j=0;j<=i;j++){let s=A[i*n+j];for(let k=0;k<j;k++)s-=A[i*n+k]*A[j*n+k];A[i*n+j]=i===j?Math.sqrt(s>1e-10?s:1e-10):s/A[j*n+j]}return A}
+function fsub(L,n,b){const y=new Float64Array(n);for(let i=0;i<n;i++){let s=b[i];for(let k=0;k<i;k++)s-=L[i*n+k]*y[k];y[i]=s/L[i*n+i]}return y}
+function bsub(L,n,y){const x=new Float64Array(n);for(let i=n-1;i>=0;i--){let s=y[i];for(let k=i+1;k<n;k++)s-=L[k*n+i]*x[k];x[i]=s/L[i*n+i]}return x}
+const dist=(a,b)=>{let s=0;for(let i=0;i<D;i++){const d=a[i]-b[i];s+=d*d}return Math.sqrt(s)}, m52=(r,l)=>{const a=2.236*r/l;return(1+a+a*a/3)*Math.exp(-a)};
+function gpFit(obs){ // obs: 全部观测（按时间顺序）；超过 220 条时保留最近 160 + 其余里评分最高的 60
+  let O=obs.map((o,i)=>({x:o.x,y:o.y,i}));const NT=obs.length;
+  if(O.length>220){const old=O.slice(0,-160).sort((a,b)=>b.y-a.y).slice(0,60);O=old.concat(O.slice(-160))}
+  const n=O.length,m=O.reduce((s,o)=>s+o.y,0)/n,sd=Math.max(.6,Math.sqrt(O.reduce((s,o)=>s+(o.y-m)**2,0)/n)),y=O.map(o=>(o.y-m)/sd);
+  const Dm=new Float64Array(n*n);for(let i=0;i<n;i++)for(let j=0;j<i;j++)Dm[i*n+j]=Dm[j*n+i]=dist(O[i].x,O[j].x);
+  const age=O.map(o=>1+(NT-1-o.i)/40);let best=null;
+  for(const ell of[.35,.55,.85,1.3,2])for(const nz of[.06,.2,.5]){const K=new Float64Array(n*n);
+    for(let i=0;i<n;i++){for(let j=0;j<i;j++)K[i*n+j]=K[j*n+i]=m52(Dm[i*n+j],ell);K[i*n+i]=1+nz*age[i]}
+    chol(K,n);const al=bsub(K,n,fsub(K,n,y));let lml=0;for(let i=0;i<n;i++)lml-=.5*y[i]*al[i]+Math.log(K[i*n+i]);
+    lml-=.5*((Math.log(ell)-Math.log(.85))**2)/.5; // 对长度尺度的弱先验，样本少时防止过拟合
+    if(!best||lml>best.lml)best={lml,L:K,al,ell,nz}}
+  const M={n,X:O.map(o=>o.x),m,sd,...best};
+  M.pred=x=>{const k=new Float64Array(n);for(let i=0;i<n;i++)k[i]=m52(dist(x,M.X[i]),M.ell);let mu=0;for(let i=0;i<n;i++)mu+=k[i]*M.al[i];const v=fsub(M.L,n,k);let q=0;for(let i=0;i<n;i++)q+=v[i]*v[i];return[mu,Math.sqrt(Math.max(1e-9,1-q))]};
+  return M}
+const TU={cur:null,prev:null,t0:0,model:null,best:null};
+function gauss(){return Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(2*Math.PI*Math.random())}
+function tunerModel(){const T=S.tuner;if(T.obs.length<3){TU.model=null;TU.best=null;return}
+  const M=TU.model=gpFit(T.obs);let b=null;const seen=T.obs.slice(-220);
+  seen.forEach(o=>{const[mu,s]=M.pred(o.x),v=mu-.4*s;if(!b||v>b.v)b={v,mu,s,x:o.x}});
+  // 在最优点附近做一次局部爬升，让"预测最优"不局限于已测过的点
+  for(let k=0;k<200;k++){const x=sane(b.x.map(v=>v+(Math.random()<.4?gauss()*.06:0))),[mu,s]=M.pred(x),v=mu-.4*s;if(v>b.v)b={v,mu,s,x}}
+  TU.best={x:b.x,mu:b.mu*M.sd+M.m,sd:b.s*M.sd,conf:clamp(1-b.s)}}
+function tunerNext(){const T=S.tuner,n=T.obs.length;
+  if(n<6){const k=n+1+(T.seed||(T.seed=1+Math.floor(Math.random()*50)));const x=PRIMES.map(b=>halton(k,b));CH.forEach(c=>x[BASE[c]]=.25+.45*x[BASE[c]]);return{x:sane(x),why:'初始探索'}}
+  if(!TU.model)tunerModel();const M=TU.model;
+  if(n%9===8&&TU.best)return{x:TU.best.x.slice(),why:'复测当前最优（校准感受漂移）'};
+  const beta=.2+3*(T.exp/100)**1.5,tops=T.obs.slice(-220).map(o=>({x:o.x,mu:M.pred(o.x)[0]})).sort((a,b)=>b.mu-a.mu).slice(0,5);if(TU.best)tops.unshift({x:TU.best.x});
+  let bx=null,bv=-1e9,loc=false;const nG=Math.round(200+500*T.exp/100);
+  for(let k=0;k<nG+700;k++){let x;const g=k<nG;
+    if(g)x=Array.from({length:D},()=>Math.random());
+    else{const c=tops[Math.floor(Math.random()**2*tops.length)].x,pm=.3+.5*Math.random();x=c.map(v=>Math.random()<pm?v+gauss()*T.tr:v)}
+    x=sane(x);const[mu,s]=M.pred(x),v=mu+beta*s+gauss()*.03;if(v>bv){bv=v;bx=x;loc=!g}}
+  return{x:bx,why:loc?'精修：在高分区域附近微调':'探索：尝试模型还不了解的区域'}}
+function tunerStart(next){TU.prev=TU.cur;TU.cur=next||tunerNext();TU.t0=nowS();if(out.src!=='tuner')setSource('tuner');uiTuner()}
+SRC.tuner={sample(t){if(!TU.cur)return null;const a=pf(TU.cur.x,t-TU.t0),k=clamp((t-TU.t0)/1.2);if(k>=1||!TU.prev)return{A:a.A*k,B:a.B*k,C:a.C*k};
+  const p=pf(TU.prev.x,t-TU.prev.t0||0);return{A:p.A*(1-k)+a.A*k,B:p.B*(1-k)+a.B*k,C:p.C*(1-k)+a.C*k}},stop(){TU.cur=TU.prev=null;uiTuner()}};
+function tunerRate(y,hot){const T=S.tuner;if(!TU.cur||TU.cur.best)return;const x=TU.cur.x.slice(),mx=T.obs.reduce((m,o)=>Math.max(m,o.y),0);
+  if(hot){T.ceil[hot]=Math.max(.15,Math.round(Math.min(T.ceil[hot],x[BASE[hot]]*.88)*100)/100);y=Math.min(y,3)}
+  T.tr=y>=mx?Math.min(.35,T.tr*1.25):Math.max(.03,T.tr*.92);
+  T.obs.push({x,y});tunerModel();T.obs[T.obs.length-1].bm=TU.best?Math.round(TU.best.mu*100)/100:null;save();
+  TU.cur.t0=TU.t0;tunerStart()}
+function tunerWave(x){const P=pPeriod(x);let m=pCycles(x);if(x[10]<.05)m=Math.max(1,Math.round(8/P));while(P*m>180&&m>1)m--;const dur=Math.round(P*m*10)/10,N=Math.round(dur*SR),tr={A:[],B:[],C:[]};
+  for(let i=0;i<N;i++){const v=pf(x,i/N*P*m);CH.forEach(c=>tr[c].push(Math.round(v[c]*100)/100))}return{id:uid(),name:'拟合最优 '+new Date().toLocaleDateString(),dur,tr}}
+function uiTuner(){const T=S.tuner,n=T.obs.length;$('sN').textContent=n;$('sMax').textContent=n?Math.max(...T.obs.map(o=>o.y)):'–';
+  $('sPred').textContent=TU.best?TU.best.mu.toFixed(1):'–';$('sConf').textContent=TU.best?Math.round(TU.best.conf*100)+'%':'–';
+  const lim=CH.filter(c=>T.ceil[c]<1).map(c=>`${CHN[c]} ≤ ${Math.round(T.ceil[c]*100)}%`);$('tCeil').innerHTML=lim.length?'已学到的强度上限：'+lim.join('，')+' <a href="#" id="tCeilR" style="color:var(--acc)">清除</a>':'';
+  const cr=$('tCeilR');if(cr)cr.onclick=e=>{e.preventDefault();T.ceil={A:1,B:1,C:1};save();uiTuner()};
+  const live=out.src==='tuner'&&TU.cur&&!TU.cur.best;$('tLive').hidden=!live;$('tBest').classList.toggle('on',!!(out.src==='tuner'&&TU.cur&&TU.cur.best));
+  $('tGo').textContent=live?'暂停':'开始 / 继续';
+  if(live){$('tNo').textContent=n+1;$('tWhy').textContent=TU.cur.why;$('tDesc').textContent=describe(TU.cur.x);
+    $('tTweak').querySelectorAll('input').forEach((el,i)=>{el.value=TU.cur.x[i]*100;el.disabled=(i<6&&!T.act[CH[i>>1]])||(i===8&&!T.act.B)||(i===9&&!T.act.C)})}
+  drawChart()}
+function drawChart(){const f=fitCanvas($('tChart'));if(!f)return;const{g,w,h}=f,O=S.tuner.obs,n=O.length;g.clearRect(0,0,w,h);
+  g.strokeStyle='#1c2029';g.fillStyle='#8b93a3';g.font='10px sans-serif';[1,5,10].forEach(v=>{const y=h-8-(v-1)/9*(h-16);g.beginPath();g.moveTo(18,y);g.lineTo(w,y);g.stroke();g.fillText(v,4,y+3)});
+  if(!n)return;const X=i=>22+(n>1?i/(n-1):.5)*(w-30),Y=v=>h-8-(clamp(v,1,10)-1)/9*(h-16);
+  O.forEach((o,i)=>{g.beginPath();g.fillStyle='rgba(232,234,240,.55)';g.arc(X(i),Y(o.y),n>150?1.5:2.5,0,7);g.fill()});
+  g.beginPath();g.strokeStyle='#6ee7b7';g.lineWidth=2;let st=false;O.forEach((o,i)=>{if(o.bm==null)return;st?g.lineTo(X(i),Y(o.bm)):g.moveTo(X(i),Y(o.bm));st=true});g.stroke()}
+
+/* ================= 界面绑定 ================= */
+function showTab(t){document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id==='t-'+t));document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  scrollTo(0,0);requestAnimationFrame(()=>{drawEd();drawChart()})}
+$('nav').onclick=e=>{const b=e.target.closest('button');if(b)showTab(b.dataset.t)};
+$('stopBtn').onclick=stopAll;$('recBtn').onclick=toggleRec;
+addEventListener('keydown',e=>{if((e.key===' '||e.key==='Escape')&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();stopAll()}});
+addEventListener('pagehide',()=>{if(ble.wr){try{ble.wr.writeValueWithoutResponse?ble.wr.writeValueWithoutResponse(pkt(0x12,0,0,0)):ble.wr.writeValue(pkt(0x12,0,0,0))}catch(e){}}});
+$('btnConn').onclick=()=>connect(false);$('btnConnAll').onclick=()=>connect(true);$('btnDisc').onclick=disconnect;$('noBle').hidden=!!navigator.bluetooth;
+function bindRange(id,get,set,fmt){const el=$(id),o=$(id+'o'),u=()=>o.textContent=fmt?fmt(+el.value):el.value;el.value=get();u();el.oninput=()=>{set(+el.value);u();save()}}
+CH.forEach(c=>{bindRange('cap'+c,()=>S.caps[c],v=>{S.caps[c]=v;$('m'+c).max=v},v=>v+' 档');$('m'+c).max=S.caps[c];
+  $('m'+c).oninput=()=>{$('m'+c+'o').textContent=$('m'+c).value;if(out.mode[c])setMode(c,0);if(out.src!=='manual')setSource('manual')};
+  $('mode'+c).onchange=e=>{setMode(c,e.target.value);if(+e.target.value){$('m'+c).value=0;$('m'+c+'o').textContent=0}}});
+bindRange('gain',()=>S.gain,v=>S.gain=v,v=>v+'%');bindRange('rise',()=>S.rise,v=>S.rise=v,v=>(v/10).toFixed(1)+' 秒');bindRange('bGuard',()=>S.bGuard,v=>S.bGuard=v,v=>v+' 秒');
+bindRange('micSens',()=>20,()=>{},v=>(v/10).toFixed(1)+'×');
+seg('aDir',v=>S.aDir===v,v=>S.aDir=v);seg('padRel',v=>S.padRel===v,v=>S.padRel=v);seg('genCh',v=>genCh===v,v=>genCh=v);
+const updAct=seg('tAct',v=>S.tuner.act[v],v=>{S.tuner.act[v]=!S.tuner.act[v];if(!CH.some(c=>S.tuner.act[c]))S.tuner.act[v]=true;if(TU.cur&&!TU.cur.best){TU.cur.x=sane(TU.cur.x);uiTuner()}});
+bindRange('tExp',()=>S.tuner.exp,v=>S.tuner.exp=v,v=>v<30?'保守精修':v<65?'均衡':'大胆探索');
+$('btnRand').onclick=()=>setSource(out.src==='random'?null:'random');
+$('btnEdge').onclick=()=>{out.pauseUntil=nowS()+ +$('edgeSec').value};
+$('padGo').onclick=()=>setSource(out.src==='pad'?null:'pad');
+$('gameGo').onclick=()=>{if(out.src==='game')return setSource(null);Object.assign(G,{y:tun(.75),vy:0,heat:.15,score:0,x:0,crash:0,burst:0,orbs:[],nextOrb:2,lt:nowS()});setSource('game')};
+$('tiltGo').onclick=()=>out.src==='tilt'?setSource(null):startTilt();$('micGo').onclick=()=>out.src==='mic'?setSource(null):startMic();
+// 波形
+$('wNew').onclick=()=>openEd(mkWave('新波形',10,['sine',2,.1,.7],['zero',1,0,0],['sine',4,.1,.7]));
+$('wImp').onclick=()=>$('wImpFile').click();
+$('wImpFile').onchange=async e=>{try{const w=JSON.parse(await e.target.files[0].text());if(!validWave(w))throw 0;w.id=uid();w.name=String(w.name||'导入波形');S.waves.push(w);save();renderWaves()}catch(x){alert('不是有效的波形文件')}e.target.value=''};
+$('edName').oninput=()=>ED&&(ED.name=$('edName').value);
+$('edDur').onchange=()=>{if(!ED)return;const d=clamp(+$('edDur').value||10,1,180);$('edDur').value=d;ED.dur=d;CH.forEach(c=>ED.tr[c]=resample(ED.tr[c],Math.round(d*SR)));drawEd()};
+$('genGo').onclick=()=>{if(!ED)return;ED.tr[genCh]=genTrack(ED.dur,$('genShape').value,clamp(+$('genN').value||1,1,200),clamp($('genLo').value/100),clamp($('genHi').value/100));drawEd()};
+$('genSmooth').onclick=()=>{if(!ED)return;const a=ED.tr[genCh],N=a.length;ED.tr[genCh]=a.map((v,i)=>Math.round((a[(i-1+N)%N]+2*v+a[(i+1)%N])/4*100)/100);drawEd()};
+$('edSave').onclick=()=>{if(!ED)return;ED.name=ED.name||'未命名';const i=S.waves.findIndex(w=>w.id===ED.id),w=JSON.parse(JSON.stringify(ED));if(i>=0)S.waves[i]=w;else S.waves.push(w);if(WP.w&&WP.w.id===w.id)WP.w=w;save();renderWaves()};
+$('edPlay').onclick=()=>{if(ED)playWave(ED)};$('edClose').onclick=()=>{ED=null;$('edCard').hidden=true};
+// 拟合
+$('tRate').innerHTML=Array.from({length:10},(_,i)=>`<button data-y="${i+1}">${i+1}</button>`).join('');
+$('tRate').onclick=e=>{const y=e.target.dataset.y;if(y)tunerRate(+y)};
+$('tLive').addEventListener('click',e=>{const h=e.target.dataset.hot;if(h)tunerRate(2,h)});
+$('tSkip').onclick=()=>{TU.cur.t0=TU.t0;tunerStart()};
+$('tGo').onclick=()=>{if(out.src==='tuner'&&TU.cur&&!TU.cur.best)return setSource(null);tunerModel();TU.cur=null;tunerStart()};
+$('tBest').onclick=()=>{if(out.src==='tuner'&&TU.cur&&TU.cur.best)return setSource(null);tunerModel();if(!TU.best)return alert('至少先完成 3 轮评分');TU.cur=null;tunerStart({x:TU.best.x.slice(),why:'',best:true})};
+$('tSave').onclick=()=>{tunerModel();if(!TU.best)return alert('至少先完成 3 轮评分');S.waves.push(tunerWave(TU.best.x));save();renderWaves();alert('已保存到波形库')};
+$('tReset').onclick=()=>{if(confirm('清空全部拟合数据并重新开始？')){if(out.src==='tuner')setSource(null);S.tuner=JSON.parse(JSON.stringify(DEF.tuner));TU.model=TU.best=null;save();updAct();$('tExp').value=S.tuner.exp;uiTuner()}};
+$('tTweak').innerHTML=PN.map((n,i)=>`<div class="sl"><b>${n}</b><input type="range" min="0" max="100" data-i="${i}"><output></output></div>`).join('');
+$('tTweak').oninput=e=>{const i=e.target.dataset.i;if(i==null||!TU.cur)return;TU.cur.x[+i]=e.target.value/100;TU.cur.x=sane(TU.cur.x);TU.cur.why='手动微调';$('tWhy').textContent='手动微调';$('tDesc').textContent=describe(TU.cur.x)};
+// 数据
+$('btnExp').onclick=()=>download('ycy-backup.json',JSON.stringify(S));$('btnImp').onclick=()=>$('impFile').click();
+$('impFile').onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text());if(!j.caps||!Array.isArray(j.waves)||!j.waves.every(validWave))throw 0;localStorage.setItem(KEY,JSON.stringify(j));location.reload()}catch(x){alert('不是有效的备份文件')}};
+showInfo();renderWaves();tunerModel();uiTuner();uiSrc();drawScope();
+(function loop(){if($('t-play').classList.contains('on')){drawPad();drawGame()}else gameStep();requestAnimationFrame(loop)})();
+addEventListener('resize',()=>{drawEd();drawChart()});
+window.YCY={S,out,ble,pkt,tunerRate,tunerStart,TU,pf,gpFit,tunerModel,tick,setSource,SRC};
+</script>
+</body>
+</html>
