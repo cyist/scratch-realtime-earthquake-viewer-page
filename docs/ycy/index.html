@@ -201,9 +201,9 @@ details summary{cursor:pointer;color:var(--mut);font-size:13px}
     <p class="h">不用你懂参数：每一轮只需要拖一条滑杆停在最舒服的位置，或者在两组里挑一个。模型从这些选择里学习你的偏好，并自己决定下一步试什么。可以无限轮继续，数据自动保存。</p>
     <div class="row"><label>当前阶段</label><span class="seg" id="tStage"><button data-v="0">热身</button><button data-v="0.5">进行中</button><button data-v="1">冲刺</button></span></div>
     <div class="row"><label>参与通道</label><span class="seg" id="tAct"><button data-v="A">旋转</button><button data-v="B">吮吸</button><button data-v="C">震动</button></span></div>
-    <div class="row"><label>反馈方式</label><span class="seg" id="tMode"><button data-v="auto">自动混合</button><button data-v="line">滑杆</button><button data-v="duel">二选一</button><button data-v="rate">打分</button></span></div>
+    <div class="row"><label>反馈方式</label><span class="seg" id="tMode"><button data-v="auto">自动混合</button><button data-v="line">滑杆</button><button data-v="duel">二选一</button><button data-v="rate">打分</button><button data-v="feel">感受板</button></span></div>
     <div class="sl"><b>探索倾向</b><input type="range" id="tExp" min="0" max="100"><output id="tExpo"></output></div>
-    <div class="row"><button id="tGo" class="pri">开始 / 继续</button><button id="tBest">播放当前最优</button><button id="tSave">最优存为波形</button><button id="tReset">重置</button></div>
+    <div class="row"><button id="tGo" class="pri">开始 / 继续</button><button id="tBest">播放当前最优</button><button id="tAuto">自动续航播放</button><button id="tSave">最优存为波形</button><button id="tReset">重置</button></div>
     <p class="h">不同阶段喜欢的东西通常不一样，所以每个阶段各学一个最优；感觉变了就切换阶段。</p>
   </div>
   <div class="card" id="tLive" hidden>
@@ -219,6 +219,7 @@ details summary{cursor:pointer;color:var(--mut);font-size:13px}
       <div class="row"><button data-d="a" class="pri" style="flex:1">A 更舒服</button><button data-d="b" class="pri" style="flex:1">B 更舒服</button><button data-d="tie">差不多</button><button data-d="bad">都不好</button></div>
     </div>
     <div id="fRate"><div class="rate" id="tRate"></div><p class="h" style="display:flex;justify-content:space-between"><span>1 = 很不舒服</span><span>10 = 非常舒服</span></p></div>
+    <div id="fFeel"><canvas id="feelPad" style="height:min(62vh,520px);user-select:none;-webkit-user-select:none"></canvas><p class="h" id="feelMsg"></p><p class="h" id="feelInfo"></p></div>
     <div class="row" id="tCo"><label>想要…</label><button data-co="up">更强</button><button data-co="down">更弱</button><button data-co="fast">更快</button><button data-co="slow">更慢</button><button data-co="rest">多停顿</button><button data-co="norest">少停顿</button><button data-co="soft">更柔和</button><button data-co="sharp">更利落</button></div>
     <div class="row"><label>太强？</label><button data-hot="A" class="cA">旋转</button><button data-hot="B" class="cB">吮吸</button><button data-hot="C" class="cC">震动</button><span class="sp"></span><button id="tSkip">跳过这轮</button></div>
     <details id="tTweakBox"><summary>手动微调全部 25 个参数</summary><div id="tTweak"></div><div class="row"><button id="tTwOk" class="pri">微调后更舒服，采用</button></div></details>
@@ -232,6 +233,10 @@ details summary{cursor:pointer;color:var(--mut);font-size:13px}
     <p class="h">下图：模型对"当前最优"的预测分随反馈次数的变化。<span id="tCeil"></span></p>
     <details><summary>它是怎么工作的</summary>
       <p class="h"><b>为什么不只打分：</b>人对"这两个哪个更舒服"的判断远比"这个值几分"稳定；分数会随状态漂移。所以主要用相对比较，打分只偶尔用来校准。</p>
+      <p class="h"><b>感受板：</b>按住手指，位置就是感受：左 = 有趣，右 = 普通，上 = 强烈，下 = 没感觉。目标是让你尽量久地待在左侧的斜线区。松手超过 1 秒算"需要休息"，输出暂停，休息时间不记录但计入总时长。</p>
+      <p class="h"><b>它怎么用这些数据：</b>① 纵向闭环：偏强就慢慢减弱，进入顶部红区立即减弱，偏弱就加强。② 时间趋势：对每个波形拟合"随时间的变化"（越来越有趣 / 越来越普通 / 越来越难坚持 / 稳定），按 90 秒视野打分，而不是取平均。③ 新鲜度轮换：兴趣消退就换一个不同的，刚播过的会被暂时避开。④ 相邻微调：在区内稳定时小改一个维度，并把"不改会怎样"外推出来做对照，得到一次隐式的二选一。⑤ 防误判：自动估计你的反应延迟并据此对齐，波形过渡期、刚恢复、手指快速移动时的数据不用或降权。</p>
+      <p class="h"><b>平滑约定：</b>波形都是 5–100 秒的循环（含其中的停顿）；切换用几秒的渐变；吮吸开关和旋转换向都有最短间隔，换向必须先经过 0。</p>
+      <p class="h"><b>自动续航播放：</b>不用按着，按学到的新鲜期轮换你喜欢的几种波形，并按学到的耐受时长自动插入减弱期。</p>
       <p class="h"><b>滑杆：</b>25 维空间里每轮只沿一条线搜索——有时是一个有名字的维度（如"震动出场比例"），有时是模型算出的最有希望的方向。你边感受边拖，停下的位置同时胜过线的两端，一次操作给出多条信息。</p>
       <p class="h"><b>模型：</b>高斯过程偏好模型，把滑杆选择、二选一、打分、"想要更…"统一成一个效用函数（拉普拉斯近似），再用置信上界决定下一轮试哪里；旧反馈权重逐渐降低以适应感受变化。</p>
       <p class="h"><b>参数：</b>全局节奏、利落度、起落偏向、段落长度、段内渐强、段内加速、全体停顿；每个通道各有强度、起伏、快慢倍率、时间差、出场比例、出场时机。通道强度可以学到 0（几乎不用）。</p>
@@ -302,7 +307,7 @@ async function disconnect(){ble.manual=true;stopAll();if(ble.wr){await bleWrite(
 
 /* ================= 输出级：信号源 → 限幅/柔化/保护 → 设备档位 ================= */
 const SRC={},SRCN={manual:'手动',random:'随机漫游',wave:'波形播放',pad:'触控板',game:'飞行游戏',tilt:'体感',mic:'声音律动',tuner:'拟合'};
-const out={src:null,sm:{A:0,B:0,C:0},dev:[0,0,0],pauseUntil:0,hist:[],mode:{A:0,B:0,C:0},bOn:0,bRest:0,aRev:false,aFlipT:0,last:nowS()};
+const out={src:null,sm:{A:0,B:0,C:0},dev:[0,0,0],pauseUntil:0,hist:[],mode:{A:0,B:0,C:0},bOn:0,bRest:0,aRev:false,aFlipT:0,aAlt:false,aSwT:0,bSuck:false,bSwT:0,bLast:0,last:nowS()};
 const rec={on:false,d:null,acc:0};
 function setSource(n){if(out.src===n)return;const p=out.src;out.src=n;if(p&&SRC[p]&&SRC[p].stop)SRC[p].stop();
   $('srcTag').textContent=n?'当前：'+SRCN[n]:'';uiSrc();if(n)wake()}
@@ -312,17 +317,18 @@ let wl=null;async function wake(){try{if(!wl&&navigator.wakeLock){wl=await navig
 function tick(){const t=nowS(),dt=Math.min(.25,t-out.last);out.last=t;
   let l={A:0,B:0,C:0};const s=out.src&&SRC[out.src];if(s){const r=s.sample(t,dt);if(r)l=r}
   const paused=t<out.pauseUntil,rise=S.rise/10;
-  for(const c of CH){let v=paused?0:clamp(+l[c]||0)*S.gain/100;const cur=out.sm[c];
-    out.sm[c]=v>cur?(rise>0?Math.min(v,cur+dt/rise):v):Math.max(v,cur-dt/.12)}
-  if(rec.on){rec.acc+=dt;while(rec.acc>=.1){rec.acc-=.1;CH.forEach(c=>rec.d[c].push(Math.round(out.sm[c]*100)/100));if(rec.d.A.length>=1800){toggleRec();break}}}
+  for(const c of CH){const v=paused?0:clamp(+l[c]||0,c==='A'?-1:0,1)*S.gain/100,cur=out.sm[c],st=Math.abs(v)>Math.abs(cur)&&v*cur>=0?(rise>0?dt/rise:9):dt/.25;out.sm[c]=cur+clamp(v-cur,-st,st)}
+  if(rec.on){rec.acc+=dt;while(rec.acc>=.1){rec.acc-=.1;CH.forEach(c=>rec.d[c].push(Math.round(Math.abs(out.sm[c])*100)/100));if(rec.d.A.length>=1800){toggleRec();break}}}
   // A：方向
-  let a=out.mode.A?0:Math.round(out.sm.A*S.caps.A);
-  if(S.aDir==='alt'){if(a===0&&t-out.aFlipT>1.5||t-out.aFlipT>12){out.aRev=!out.aRev;out.aFlipT=t}}else out.aRev=S.aDir==='rev';
+  let a=out.mode.A?0:Math.round(Math.abs(out.sm.A)*S.caps.A);
+  if(S.aDir==='alt'){if(a===0&&t-out.aFlipT>1.5||t-out.aFlipT>12){out.aAlt=!out.aAlt;out.aFlipT=t}}else out.aAlt=S.aDir==='rev';
+  const want=out.aAlt!==(out.sm.A<0);if(want!==out.aRev){a=0;if(t-out.aSwT>1){out.aRev=want;out.aSwT=t}} // 换向必须经过 0，且至少间隔 1 秒
   const aDev=a&&out.aRev?20+a:a;
   // B：0放气 1保持 2+吸气；连续吸气保护
   let b=out.mode.B?0:(out.sm.B<.03?0:Math.max(1,Math.round(out.sm.B*S.caps.B)));
+  const bs=b>=2;if(bs!==out.bSuck){if(t-out.bSwT<.7)b=out.bLast;else{out.bSuck=bs;out.bSwT=t}} // 吮吸开关至少间隔 0.7 秒
   if(t<out.bRest)b=0;else if(b>=2){if(!out.bOn)out.bOn=t;else if(t-out.bOn>S.bGuard){out.bRest=t+clamp((t-out.bOn)*.6,.5,3);out.bOn=0;b=0}}else out.bOn=0;
-  const cc=out.mode.C?0:Math.round(out.sm.C*S.caps.C);
+  out.bLast=b;const cc=out.mode.C?0:Math.round(out.sm.C*S.caps.C);
   out.dev=[aDev,b,cc];out.hist.push([a/20,b/20,cc/20]);if(out.hist.length>240)out.hist.shift();
   const key=out.dev.join();if(ble.wr&&key!==ble.sentKey&&!ble.pending){ble.pending=true;ble.sentKey=key;bleWrite(pkt(0x12,...out.dev)).then(()=>ble.pending=false)}
   $('roA').textContent=(out.aRev&&a?'-':'')+a;$('roB').textContent=b;$('roC').textContent=cc}
@@ -452,31 +458,35 @@ async function startMic(){try{mic.stream=await navigator.mediaDevices.getUserMed
    25 维参数 → 三通道波形函数（含通道轮流出场、停顿、渐强、加速、时间差）。
    反馈：滑杆线搜索 / 二选一 / 打分 / "想要更…"（coactive），统一进一个高斯过程效用模型
    （Matérn 5/2，评分=高斯似然，比较=probit 似然，拉普拉斯近似），UCB 选下一轮。阶段作为上下文维度。 */
-const D=25,RATES=[.25,.5,1,2,3],CB={A:7,B:13,C:19},CHS={A:'旋转',B:'吮吸',C:'震动'};
-const PN=['节奏周期','利落度','起落偏向','段落长度','段内渐强','段内加速','全体停顿',...CH.flatMap(c=>['强度','起伏','快慢倍率','时间差','出场比例','出场时机'].map(n=>CHS[c]+'·'+n))];
-const DEFX=[.4,.1,.5,.45,0,0,0, .4,.6,.5,0,1,.5, .35,.6,.5,.33,1,.5, .4,.6,.5,.66,1,.5];
-const T2DEF=()=>({pts:[],rates:[],pairs:[],n:0,hist:[],ceil:{A:1,B:1,C:1},act:{A:true,B:true,C:true},exp:45,tr:.2,mode:'auto',stage:.5,ell:.9});
-if(!S.t2)S.t2=T2DEF();
+const D=27,RATES=[.25,.5,1,2,3],CB={A:7,B:13,C:19},CHS={A:'旋转',B:'吮吸',C:'震动'};
+const PN=['节奏周期','利落度','起落偏向','段落长度','段内渐强','段内加速','全体停顿',...CH.flatMap(c=>['强度','起伏','快慢倍率','时间差','出场比例','出场时机'].map(n=>CHS[c]+'·'+n)),'旋转·正反交替','吮吸·每次时长'];
+const DEFX=[.4,.1,.5,.45,0,0,0, .4,.6,.5,0,1,.5, .35,.6,.5,.33,1,.5, .4,.6,.5,.66,1,.5, 0,1];
+const T2DEF=()=>({pts:[],rates:[],pairs:[],n:0,hist:[],ceil:{A:1,B:1,C:1},act:{A:true,B:true,C:true},exp:45,tr:.2,mode:'auto',stage:.5,ell:.9,v:3,lag:1.6,sI:0,zoneT:0,totT:0});
+if(!S.t2||S.t2.v!==3)S.t2=T2DEF();
 const TU={r:null,play:null,prevX:null,sw:0,t0:0,model:null,champ:null,force:null,lastAx:[],rc:0,best:false};
 function wshape(s,k,p){p-=Math.floor(p);const kk=.15+.7*k,pw=p<kk?.5*p/kk:.5+.5*(p-kk)/(1-kk),u=clamp(s)*1.999,i=Math.floor(u),f=u-i,
   sh=[.5-.5*Math.cos(2*Math.PI*pw),1-Math.abs(2*pw-1),clamp((.25-Math.abs(pw-.5))*14+.5)];return sh[i]*(1-f)+sh[i+1]*f}
-const pP=x=>.6*Math.pow(20,x[0]),pT=x=>8*Math.pow(8,x[3]);
+const pP=x=>.6*Math.pow(20,x[0]),pT=x=>5*Math.pow(20,x[3]),MINP={A:1.2,B:2,C:.6};
 function pf(x,t){const P=pP(x),T=pT(x),tau=((t%T)+T)%T,Ta=T*(1-.4*x[6]),o={A:0,B:0,C:0};if(tau>=Ta)return o;
   const v=tau/Ta,bu=1-x[4]*(1-v),ph=(tau+.75*x[5]*tau*tau/Ta)/P,ge=x[6]>.02?clamp(Math.min(tau,Ta-tau)/.4):1;
   for(const c of CH){const b=CB[c],lv=x[b];if(lv<=0)continue;const dp=x[b+1],ra=.2+.8*x[b+4];let win=1;
     if(ra<.97){const d=((v-x[b+5])%1+1)%1;win=d<ra?clamp(Math.min(d,ra-d)*Ta/.5):0}
-    o[c]=lv*(1-dp+dp*wshape(x[1],x[2],ph*RATES[Math.round(x[b+2]*4)]+x[b+3]))*bu*ge*win}return o}
+    let p=ph*RATES[Math.round(x[b+2]*4)]+x[b+3],wv;if(c==='B'){const d=.25+.75*x[26];p-=Math.floor(p);wv=p<d?wshape(x[1],x[2],p/d):0}else wv=wshape(x[1],x[2],p);
+    o[c]=lv*(1-dp+dp*wv)*bu*ge*win}
+  const dn=Math.min(Math.round(x[25]*4),Math.floor(T/4));if(dn>0&&o.A){const q=(tau/T*dn)%1,h=q%.5;o.A*=(q<.5?1:-1)*clamp(Math.min(h,.5-h)*T/dn/.6)}return o}
 // 规范化：把不起作用的条件参数固定下来，降低有效维度
 function sane(x){const T=S.t2;x=x.slice(0,D).map(v=>clamp(v));
   for(const c of CH){const b=CB[c];if(!T.act[c]||x[b]<.04){x[b]=0;x[b+1]=x[b+2]=x[b+3]=x[b+5]=.5;x[b+4]=1;continue}
-    x[b]=Math.min(x[b],T.ceil[c]);x[b+2]=Math.round(x[b+2]*4)/4;if(x[b+1]<.05){x[b+1]=0;x[b+2]=.5;x[b+3]=.5}if(x[b+4]>.96){x[b+4]=1;x[b+5]=.5}}
+    x[b]=Math.min(x[b],T.ceil[c]);x[b+2]=Math.round(x[b+2]*4)/4;if(x[b+1]<.05){x[b+1]=0;x[b+2]=.5;x[b+3]=.5}if(x[b+4]>.96){x[b+4]=1;x[b+5]=.5}
+    let ri=Math.round(x[b+2]*4);while(ri>0&&pP(x)/RATES[ri]<MINP[c])ri--;x[b+2]=ri/4}
+  x[25]=x[CB.A]>0?Math.round(x[25]*4)/4:0;if(!(x[CB.B]>0&&x[CB.B+1]>0))x[26]=1;
   if(!CH.some(c=>x[CB[c]]>0)){const c=CH.find(c=>T.act[c]);x[CB[c]]=Math.min(.3,T.ceil[c])}
   return x.map(v=>Math.round(v*1000)/1000)}
 function gauss(){return Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(2*Math.PI*Math.random())}
-function randX(){const x=Array.from({length:D},()=>Math.random());if(Math.random()<.5)x[6]=0;if(Math.random()<.4)x[4]=0;if(Math.random()<.5)x[5]=0;
+function randX(){const x=Array.from({length:D},()=>Math.random());if(Math.random()<.5)x[6]=0;if(Math.random()<.4)x[4]=0;if(Math.random()<.5)x[5]=0;if(Math.random()<.6)x[25]=0;if(Math.random()<.5)x[26]=1;
   for(const c of CH){const b=CB[c];x[b]=Math.random()<.2?0:.2+.7*Math.random();if(Math.random()<.5)x[b+4]=1}return sane(x)}
 function perturb(c,tr){const pm=.12+.35*Math.random();return sane(c.map(v=>Math.random()<pm?v+gauss()*tr:v))}
-function describe(x){const on=CH.filter(c=>S.t2.act[c]);return`周期 ${pP(x).toFixed(1)}s · 段落 ${Math.round(pT(x))}s · `+on.map(c=>{const b=CB[c];return CHS[c]+' '+(x[b]>0?Math.round(x[b]*100)+'%'+(x[b+4]<1?`(出场${Math.round((.2+.8*x[b+4])*100)}%)`:''):'关')}).join(' / ')+(x[6]>.05?` · 停顿 ${Math.round(x[6]*40)}%`:'')+(x[4]>.15?' · 渐强':'')+(x[5]>.15?' · 加速':'')}
+function describe(x){const on=CH.filter(c=>S.t2.act[c]);return`周期 ${pP(x).toFixed(1)}s · 段落 ${Math.round(pT(x))}s · `+on.map(c=>{const b=CB[c];return CHS[c]+' '+(x[b]>0?Math.round(x[b]*100)+'%'+(x[b+4]<1?`(出场${Math.round((.2+.8*x[b+4])*100)}%)`:''):'关')}).join(' / ')+(x[6]>.05?` · 停顿 ${Math.round(x[6]*40)}%`:'')+(x[25]>0&&x[CB.A]>0?' · 旋转正反交替':'')+(x[4]>.15?' · 渐强':'')+(x[5]>.15?' · 加速':'')}
 // --- 数值 ---
 const dist=(a,b)=>{let s=0;for(let i=0;i<D;i++){const d=a[i]-b[i];s+=d*d}const c=.7*((a[D]||0)-(b[D]||0));return Math.sqrt(s+c*c)},m52=(r,l)=>{const a=2.236*r/l;return(1+a+a*a/3)*Math.exp(-a)};
 function lu(A,n){const p=new Int32Array(n);let ld=0;for(let i=0;i<n;i++)p[i]=i;
@@ -489,7 +499,7 @@ function lphi(z){ // [log Φ(z), φ(z)/Φ(z)]
   if(z<-3.5){const q=1-1/(z*z)+3/(z*z*z*z);return[-.5*z*z-Math.log(-z)-.9189+Math.log(q),-z/q]}
   const t=1/(1+.3275911*Math.abs(z)/Math.SQRT2),e=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-.284496736)*t+.254829592)*t*Math.exp(-z*z/2),P=z>=0?.5*(1+e):.5*(1-e);
   return[Math.log(P),Math.exp(-z*z/2)/2.5066/P]}
-const SR2=.35*.35,SPc=.57,CFG={ard:false,ck:1,wb:1};
+const SR2=.35*.35,SPc=.57,CFG={ard:false,ck:1,wb:1,learn:true,soft:false};
 function likT(f,n,R,Pr){const g=new Float64Array(n),W=new Float64Array(n*n);let ll=0;
   for(const r of R){const d=r.y-f[r.i],w=r.w/SR2;ll-=.5*w*d*d;g[r.i]+=w*d;W[r.i*n+r.i]+=w}
   for(const q of Pr){const z=(f[q.a]-f[q.b])/SPc,[lp,r]=lphi(z),gg=q.w*r/SPc,h=q.w*r*(r+z)/(SPc*SPc);ll+=q.w*lp;g[q.a]+=gg;g[q.b]-=gg;W[q.a*n+q.a]+=h;W[q.b*n+q.b]+=h;W[q.a*n+q.b]-=h;W[q.b*n+q.a]-=h}
@@ -507,7 +517,7 @@ function laplace(K,n,R,Pr,full){let f=new Float64Array(n),a=new Float64Array(n),
 function buildModel(){const T=S.t2,items=[...T.rates.map(r=>({t:r.t,r})),...T.pairs.map(p=>({t:p.t,p}))].sort((a,b)=>b.t-a.t);
   const idx=new Map(),X=[],R=[],Pr=[],id=i=>{if(!idx.has(i)){idx.set(i,X.length);X.push(T.pts[i])}return idx.get(i)};
   for(const it of items){if(X.length>215)break;const w=Math.max(.35,1/(1+(T.n-it.t)/120));
-    if(it.r)R.push({i:id(it.r.i),y:(it.r.y-5.5)/2,w});else Pr.push({a:id(it.p.a),b:id(it.p.b),w:w*(it.p.w||1)})}
+    if(it.r)R.push({i:id(it.r.i),y:(it.r.y-5.5)/2,w:w*(it.r.w||1)});else Pr.push({a:id(it.p.a),b:id(it.p.b),w:w*(it.p.w||1)})}
   const n=X.length;if(!n){TU.model=null;return}
   if(!T.dw||T.dw.length!==D+1){T.dw=Array(D+1).fill(1);T.dw[D]=.7}
   const distw=(a,b,dw)=>{let q=0;for(let i=0;i<=D;i++){const d=(a[i]-b[i])*dw[i];q+=d*d}return Math.sqrt(q)};
@@ -526,12 +536,13 @@ function champion(){const T=S.t2,M=TU.model,c=T.stage,d0=sane(DEFX);if(!M){TU.ch
 function axes(base){const A=[{n:'整体强度',lo:'更弱',hi:'更强',s0:.5,at:s=>{const x=base.slice();CH.forEach(c=>x[CB[c]]*=.4+1.2*s);return sane(x)}}];
   const one=(i,n,lo,hi)=>A.push({n,lo,hi,s0:base[i],at:s=>{const x=base.slice();x[i]=s;return sane(x)}});
   one(0,'节奏快慢','快','慢');one(1,'利落度','圆润柔和','干脆利落');one(2,'起落偏向','急起缓落','缓起急落');one(3,'段落长度','短段落','长段落');one(4,'段内渐强','始终一样','由弱到强');one(5,'段内加速','匀速','越来越快');one(6,'全体停顿','不停','每段后长停顿');
+  if(base[CB.A]>0)one(25,'旋转·正反交替','只朝一个方向','频繁换向');if(base[CB.B]>0&&base[CB.B+1]>0)one(26,'吮吸·每次时长','短促一吸','长吸');
   const na=CH.filter(c=>base[CB[c]]>0).length;
   for(const c of CH){if(!S.t2.act[c])continue;const b=CB[c],N=CHN[c];one(b,N+'·强度','关 / 弱','强');if(base[b]<=0)continue;one(b+1,N+'·起伏','平稳持续','大起大落');
     if(base[b+1]>0){one(b+2,N+'·快慢倍率','慢 4 倍','快 3 倍');if(na>1)one(b+3,N+'·时间差','提前','滞后')}
     one(b+4,N+'·出场比例','偶尔出场','一直都在');if(base[b+4]<1)one(b+5,N+'·出场时机','段落开头','段落末尾')}return A}
 function setPlay(x,fade){TU.prevX=fade&&TU.play?TU.play:null;TU.play=x;TU.sw=nowS()}
-function nextRound(){const T=S.t2;if(!TU.model&&T.n)buildModel();champion();const base=TU.force||TU.champ.x;TU.force=null;TU.best=false;
+function nextRound(){const T=S.t2;if(!TU.model&&T.n)buildModel();champion();const forced=!!TU.force,base=TU.force||TU.champ.x;TU.force=null;TU.best=false;
   let type=T.mode;if(type==='auto')type=T.n<3?'duel':['axis','line','axis','line','duel','axis','line','axis','line','rate'][TU.rc%10];else if(type==='line')type=TU.rc%2?'line':'axis';TU.rc++;
   const M=TU.model,c=T.stage,beta=.3+2.5*(T.exp/100)**1.5,ucb=x=>{if(!M)return Math.random();const[m,s]=M.pred(x,c);return m+beta*s};
   if(type==='line'&&!M)type='axis';let r;
@@ -544,9 +555,10 @@ function nextRound(){const T=S.t2;if(!TU.model&&T.n)buildModel();champion();cons
     r={type,base,at:s=>sane(L.map((v,i)=>v+(Rr[i]-v)*s)),s0:.35/1.5,lo:'反方向',hi:'模型建议方向',why:'滑杆 · 模型建议的组合方向'+(top?'（'+top+'）':'')}}
   else if(type==='duel'){let e=null,bv=-1e9,far=T.n<3?.6:.3;for(let k=0;k<600;k++){const x=k<300?randX():perturb(base,.25);if(dist(x,base)<far)continue;const v=ucb(x)+gauss()*.02;if(v>bv){bv=v;e=x}}
     if(!e)e=randX();const bi=Math.random()<.5?0:1;r={type,base,bi,xs:bi?[e,base]:[base,e],sel:0,why:'二选一 · 当前最优 vs 新挑战者（顺序随机）'}}
+  else if(type==='feel'){r={type,base,x:base,why:'感受板 · 按住，手指跟着感觉走'};TU.r=r;feelStart(base);return uiTuner(true)}
   else{let x=base;if(TU.rc%20>=10&&M){let bv=-1e9;for(let k=0;k<300;k++){const y=perturb(base,T.tr),v=ucb(y);if(v>bv){bv=v;x=y}}}r={type:'rate',base,x,why:'打分 · 校准绝对感受'}}
-  TU.r=r;setPlay(r.type==='duel'?r.xs[0]:r.type==='rate'?r.x:r.at(r.s0),true);if(r.type!=='duel'&&r.type!=='rate')$('tSl').value=Math.round(r.s0*100);uiTuner(true)}
-SRC.tuner={sample(t){if(!TU.play)return null;const a=pf(TU.play,t-TU.t0),k=clamp((t-TU.sw)/.8);if(k>=1||!TU.prevX)return a;const p=pf(TU.prevX,t-TU.t0);
+  TU.r=r;setPlay(r.xs?r.xs[0]:r.at?r.at(r.s0):r.x,true);if(r.at)$('tSl').value=Math.round(r.s0*100);uiTuner(true)}
+SRC.tuner={sample(t){if(!TU.play)return null;if(TU.r&&(TU.r.type==='feel'||TU.r.type==='auto'))return feelOut();const a=pf(TU.play,t-TU.t0),k=clamp((t-TU.sw)/.8);if(k>=1||!TU.prevX)return a;const p=pf(TU.prevX,t-TU.t0);
   return{A:p.A*(1-k)+a.A*k,B:p.B*(1-k)+a.B*k,C:p.C*(1-k)+a.C*k}},stop(){TU.r=null;TU.play=TU.prevX=null;TU.best=false;uiTuner()}};
 // --- 反馈记录 ---
 const PK=new Map();function addPt(x){const T=S.t2,p=x.slice(0,D).concat([T.stage]),key=p.join();if(PK.size!==T.pts.length){PK.clear();T.pts.forEach((q,i)=>PK.set(q.join(),i))}
@@ -568,6 +580,100 @@ function coact(op){if(!TU.r||!TU.play)return;const x=TU.play.slice(),lv=f=>CH.fo
   const y=sane(x);if(dist(y,TU.play)<.005)return;addPair(addPt(y),addPt(TU.play),.6);TU.force=y;commit(true)}
 function hot(c){if(!TU.r||!TU.play)return;const T=S.t2,old=TU.play,lv=old[CB[c]];if(lv<=0)return;T.ceil[c]=Math.max(.15,Math.round(Math.min(T.ceil[c],lv*.85)*100)/100);
   const y=sane(old);addPair(addPt(y),addPt(old));TU.force=y;commit(false)}
+// ================= 感受板：按住连续反馈 =================
+// 横轴：左=有趣 右=普通；纵轴：上=强烈 下=没感觉。目标：让用户在"有趣且强度适中"的目标区里待得尽量久（含休息时间）。
+// 纵向由闭环增益控制（太强就减、太弱就加）；横向由偏好模型 + 新鲜度轮换 + 相邻微调对比来学习。
+const ZI=.68,ZA0=.315,ZA1=.685,TOP=.87,BOT=.13,sig=v=>1/(1+Math.exp(-v));
+const zoneOf=(i,a)=>sig((i-ZI)/.06)*sig((a-ZA0+.03)/.04)*sig((ZA1+.03-a)/.04),gain2=(i,a)=>.55*zoneOf(i,a)+.45*i-(a>TOP?.5:0);
+const FE={test:false,down:false,i:0,a:0,t:0,clock:0,relT:0,resting:true,started:false,resumeT:-99,restStart:0,overRest:false,ep:null,closing:[],recent:[],hist:[],
+  iE:0,aE:.5,aF:.5,zE:0,hotT:0,boredT:0,runT:0,softU:-99,lastChg:0,lastGain:0,lagT:0,msg:'',trend:'',trail:[],lx:0,ly:0,sp:0};
+function feelStart(x){Object.assign(FE,{down:false,resting:true,started:false,resumeT:-99,ep:null,closing:[],hist:[],iE:0,aE:.5,aF:.5,zE:0,hotT:0,boredT:0,runT:0,softU:-99,msg:'',trend:''});newEp(x,0,'new')}
+function newEp(x,fade,kind){const p=FE.ep;if(kind==='new')FE.fails=0;if(p){p.tOut=FE.clock;FE.closing.push(p);FE.recent.push({x:p.x,c:FE.clock});if(FE.recent.length>8)FE.recent.shift()}
+  FE.ep={x,t0:FE.clock,tIn:FE.clock+fade,fade,S:[],kind,from:p,sx:new Float64Array(D),sw:0,pk:0};TU.play=x;FE.lastChg=FE.clock;FE.boredT=0;FE.hotT=0}
+function feelRaw(){const e=FE.ep,c=FE.clock;if(!e)return{A:0,B:0,C:0};const a=pf(e.x,c);if(e.from&&c<e.tIn){let k=(c-e.t0)/e.fade;k=k*k*(3-2*k);const p=pf(e.from.x,c);CH.forEach(q=>a[q]=p[q]*(1-k)+a[q]*k)}return a}
+function feelOut(){const a=feelRaw(),auto=TU.r&&TU.r.type==='auto',m=(FE.resting&&!auto?0:1)*clamp((FE.t-FE.resumeT)/3)*(FE.t<FE.softU?.5:1);CH.forEach(q=>a[q]*=m);return a}
+function scaleLv(f){const e=FE.ep,x=e.x.slice();CH.forEach(c=>{const b=CB[c];if(x[b]>0)x[b]=clamp(x[b]*f,.08,1)});e.x=sane(x);TU.play=e.x;FE.lastGain=FE.clock}
+const epLen=e=>e.S.length?e.S[e.S.length-1][0]-e.S[0][0]:0;
+// 带收缩的加权线性趋势：i(s)=i0+bi*s, a(s)=a0+ba*s —— 区分"越来越有趣 / 越来越普通 / 越来越难坚持 / 稳定"
+function epFit(e){const S_=e.S,n=S_.length;if(n<20)return null;let W=0,ms=0,mi=0,ma=0;for(const q of S_){W+=q[3];ms+=q[3]*q[0];mi+=q[3]*q[1];ma+=q[3]*q[2]}if(W<12)return null;ms/=W;mi/=W;ma/=W;
+  let sxx=0,sxi=0,sxa=0;for(const q of S_){const d=q[0]-ms;sxx+=q[3]*d*d;sxi+=q[3]*d*(q[1]-mi);sxa+=q[3]*d*(q[2]-ma)}
+  const K=11000,bi=(sxi+K*(S.t2.sI||0))/(sxx+K),ba=sxa/(sxx+K);return{W,ms,mi,ma,bi,ba,i0:mi-bi*ms,a0:ma-ba*ms,len:S_[n-1][0]}}
+const fitAt=(f,s)=>[clamp(f.i0+f.bi*s),clamp(f.a0+f.ba*s)];
+function trendName(f){const di=f.bi*60,da=f.ba*60,o=[];if(di>.1)o.push('越来越有趣');else if(di<-.1)o.push('越来越普通');if(da>.1)o.push(f.ma>.6?'越来越难坚持':'越来越强烈');else if(da<-.1)o.push('感觉在变淡');return o.join(' · ')||'感受稳定'}
+function finalizeEp(e){const T=S.t2,f=e.fit=epFit(e);if(!f)return;
+  let u=0,k=0;for(let s=0;s<=90;s+=3){const[i,a]=fitAt(f,s);u+=gain2(i,a);k++}u/=k; // 按 90 秒视野评估：会变淡的波形得分更低
+  let y=1+9*clamp(u);if(e.over)y=Math.min(y,3);const mx=sane(Array.from(e.sx,v=>v/e.sw));
+  T.rates.push({i:addPt(mx),y:Math.round(y*10)/10,t:T.n,w:.8*Math.min(1,f.W/5/30)});T.n++;if(f.len>20)T.sI=.85*(T.sI||0)+.15*f.bi;e.from=null;e.S=[];feelLearn()}
+function feelLearn(){buildModel();champion();const T=S.t2;T.hist.push(+clamp(5.5+2*TU.champ.mu,1,10).toFixed(2));if(T.hist.length>400)T.hist.shift();compact();save();if(!FE.test)uiTuner()}
+// 相邻微调对比：把"刚才"外推到现在作为对照，消除"任何变化都新鲜"带来的偏差
+function judgeProbe(p,early){const o=p.from,fo=o&&o.fit;p.judged=true;p.kind='kept';FE.lastChg=FE.clock;if(!fo)return;const lag=S.t2.lag;let m=0,cf=0,W=0;
+  for(const q of p.S){if(q[0]<3)continue;const[i,a]=fitAt(fo,fo.len+p.fade+q[0]);m+=q[3]*gain2(q[1],q[2]);cf+=q[3]*gain2(i,a);W+=q[3]}if(W<10)return;const d=(m-cf)/W;
+  const ip=addPt(sane(Array.from(p.sx,v=>v/p.sw))),io=addPt(sane(Array.from(o.sx,v=>v/o.sw)));
+  FE.fails=d>.05?0:(FE.fails||0)+1;
+  if(d>.05)addPair(ip,io,clamp(d/.25,.3,1));else if(d<-.05){addPair(io,ip,clamp(-d/.25,.3,1));FE.msg='刚才那个更好，换回去';const x=o.x.slice();CH.forEach(c=>x[CB[c]]=p.x[CB[c]]>0&&x[CB[c]]>0?p.x[CB[c]]:x[CB[c]]);newEp(sane(x),3,'revert')}
+  else{addPair(ip,io,.3);addPair(io,ip,.3)}S.t2.n++}
+function pickNext(explore){const T=S.t2,M=TU.model,c=T.stage,cur=FE.ep.x,beta=explore?.3+2.5*(T.exp/100)**1.5:0,cand=[];
+  if(M)M.X.forEach(p=>cand.push(sane(p)));if(!TU.champ)champion();for(let k=0;k<150;k++)cand.push(perturb(TU.champ.x,T.tr*1.5+.05));if(explore||!M)for(let k=0;k<60;k++)cand.push(randX());
+  let b=null,bv=-1e9;if(CFG.learn)for(const x of cand){if(dist(x,cur)<.2)continue;let v=M?(([m,s])=>m+beta*s)(M.pred(x,c)):Math.random();
+    for(const r of FE.recent)v-=1.2*Math.exp(-(FE.clock-r.c)/150)*m52(dist(x,r.x),.6);v-=1.2*m52(dist(x,cur),.6);v+=gauss()*.03;if(v>bv){bv=v;b=x}}
+  b=(b||randX()).slice();const lv=x=>{let s=0,n=0;CH.forEach(q=>{if(x[CB[q]]>0){s+=x[CB[q]];n++}});return n?s/n:0},f=lv(b)?clamp(lv(cur)/lv(b),.5,2):1;CH.forEach(q=>{if(b[CB[q]]>0)b[CB[q]]=clamp(b[CB[q]]*f,.08,1)});return sane(b)}
+function probeStep(){const T=S.t2,M=TU.model,base=FE.ep.x,A=axes(base).filter(a=>a.n!=='整体强度'&&!TU.lastAx.includes(a.n));if(!A.length)return null;
+  let b=null;for(const a of A)for(const d of[-.15,.15]){const s=clamp(a.s0+d),x=a.at(s);if(dist(x,base)<.03)continue;const sc=(M?(([m,q])=>m+q)(M.pred(x,T.stage)):0)+Math.random()*(M?.2:1);if(!b||sc>b.sc)b={sc,x,n:a.n}}
+  if(b){TU.lastAx.push(b.n);if(TU.lastAx.length>4)TU.lastAx.shift()}return b}
+function estLag(){const H=FE.hist,n=H.length;if(n<150)return;let best=null;for(let k=0;k<=13;k++){let sa=0,sl=0,saa=0,sll=0,sal=0,m=0;
+    for(let j=k;j<n;j++){const a=H[j][1];if(a<0)continue;const l=H[j-k][0];sa+=a;sl+=l;saa+=a*a;sll+=l*l;sal+=a*l;m++}if(m<100)return;
+    const va=saa/m-(sa/m)**2,vl=sll/m-(sl/m)**2;if(va<.002||vl<.002)return;const r=(sal/m-sa*sl/m/m)/Math.sqrt(va*vl);if(!best||r>best.r)best={r,k}}
+  if(best&&best.r>.3){const T=S.t2;T.lag=Math.round(clamp(.8*T.lag+.2*best.k*.2,.6,4)*100)/100}}
+function feelDown(){FE.down=true;if(FE.resting){const T=S.t2;if(FE.started){const r=FE.t-FE.restStart;T.restLen=Math.round((T.restLen?.7*T.restLen+.3*r:r)*10)/10;if(FE.overRest)scaleLv(.85)}FE.resting=false;FE.started=true;FE.resumeT=FE.t;FE.runT=0;FE.msg=''}}
+function feelUp(){FE.down=false;FE.relT=FE.t}
+function feelTick(dt){const r=TU.r;if(!r||!FE.ep)return;const T=S.t2,auto=r.type==='auto';if(!auto&&r.type!=='feel')return;FE.t+=dt;
+  if(auto){FE.clock+=dt;FE.runT+=dt;if(FE.clock-FE.lastChg>(T.fresh||45)){newEp(pickNext(false),5,'new');if(!FE.test)uiTuner()}
+    if(T.runN>=2&&FE.runT>T.run*.85){FE.softU=FE.t+Math.min(T.restLen||8,15);FE.runT=-Math.min(T.restLen||8,15)}return}
+  if(!FE.down){if(!FE.resting&&FE.t-FE.relT>1){FE.resting=true;FE.restStart=FE.relT;FE.overRest=FE.aF>.8;if(FE.runT>10){T.run=Math.round((T.runN?.7*T.run+.3*FE.runT:FE.runT)*10)/10;T.runN=(T.runN||0)+1}FE.msg='休息中，准备好了再按住'}
+    if(FE.resting){if(FE.started)T.totT=(T.totT||0)+dt;return}}
+  FE.clock+=dt;FE.runT+=dt;T.totT=(T.totT||0)+dt;const o=feelRaw(),L=(Math.abs(o.A)+o.B+o.C)/3;FE.hist.push([L,FE.down?FE.a:-1]);if(FE.hist.length>300)FE.hist.shift();
+  for(let k=FE.closing.length-1;k>=0;k--){const c=FE.closing[k];if(FE.clock>c.tOut+T.lag+.4){FE.closing.splice(k,1);finalizeEp(c)}}
+  if(FE.clock-FE.lagT>15){FE.lagT=FE.clock;estLag()}
+  if(!FE.down)return;const e=FE.ep,lag=T.lag,te=FE.clock-lag,ok=FE.t-FE.resumeT>2+lag&&FE.t>FE.softU+lag,w=1/(1+(FE.sp/.5)**2);FE.sp*=.6;
+  T.zoneT=(T.zoneT||0)+(zoneOf(FE.i,FE.a)>.5?dt:0);
+  if(ok){const tg=te>=e.tIn?e:(e.from&&te<e.t0&&te>=e.from.tIn&&!e.from.fit?e.from:null);if(tg){tg.S.push([te-tg.tIn,FE.i,FE.a,w]);for(let j=0;j<D;j++)tg.sx[j]+=w*tg.x[j];tg.sw+=w}}
+  const tau=clamp(pT(e.x)/2,4,12),k1=Math.min(1,dt/tau);FE.iE+=(FE.i-FE.iE)*k1;FE.aE+=(FE.a-FE.aE)*k1;FE.aF+=(FE.a-FE.aF)*Math.min(1,dt);FE.zE+=(zoneOf(FE.i,FE.a)-FE.zE)*k1;e.pk=Math.max(e.pk,FE.iE);
+  const val=epLen(e),f=val>12&&e.S.length%10===0?epFit(e):null;if(f)FE.trend=trendName(f);
+  if(!ok||FE.clock<e.tIn+lag+1)return;
+  // 1 过强：立即减弱
+  FE.hotT=FE.aF>TOP?FE.hotT+dt:0;if(FE.hotT>.8&&FE.clock-FE.lastGain>3){const old=e.x;scaleLv(.78);e.over=true;addPair(addPt(e.x),addPt(old),.8);FE.msg='太强了，已减弱';FE.hotT=0;return}
+  // 2 慢速增益调节：把强度维持在目标区的纵向范围内
+  if(FE.clock-FE.lastGain>5){if(FE.aE>ZA1+.04)scaleLv(.93);else if(FE.aE<ZA0-.04)scaleLv(FE.aE<BOT?1.15:1.07)}
+  // 3 相邻微调的判定
+  if(e.kind==='probe'&&!e.judged&&(val>=15||(val>=8&&FE.iE<.4)))return judgeProbe(e);
+  // 4 无聊 / 新鲜感消退：换一个不同的
+  FE.boredT=FE.iE<.45?FE.boredT+dt:0;if(FE.boredT>6&&val>=10&&e.kind!=='probe'){if(e.pk>ZI)T.fresh=Math.round(((T.fresh||val)*.7+val*.3)*10)/10;FE.msg=e.pk>ZI?'新鲜感过去了，换一个':'这个一般，换一个';return newEp(pickNext(true),4,'new')}
+  // 5 微调：在区内稳定时偶尔试探；不在区内（不上不下）时更积极地爬坡，连续两次没改善就换一个
+  const inZ=FE.zE>.6;if(!inZ&&FE.fails>=2&&e.kind!=='probe'&&val>=8){FE.fails=0;FE.msg='附近没有更好的，换一个';return newEp(pickNext(true),4,'new')}
+  if(CFG.learn&&e.kind!=='probe'&&FE.clock-FE.lastChg>(inZ?35:16)&&val>=(inZ?20:12)){const p=probeStep();if(p){FE.msg='微调：'+p.n;return newEp(p.x,4,'probe')}}
+  // 6 预防性减弱：快到你通常需要休息的时长时先减弱一会儿
+  if(CFG.soft&&T.runN>=2&&FE.runT>T.run*.8&&FE.t>FE.softU+30){FE.softU=FE.t+10;FE.runT*=.5;FE.msg='先减弱一会儿，帮你撑得更久'}}
+setInterval(()=>{if(!FE.test)feelTick(.2)},200);
+function drawFeel(){const f=fitCanvas($('feelPad'));if(!f)return;const{g,w,h}=f,t=nowS(),T=S.t2,yT=h*(1-TOP),yB=h*(1-BOT);g.clearRect(0,0,w,h);
+  g.fillStyle='rgba(255,77,109,.14)';g.fillRect(0,0,w,yT);g.fillStyle='rgba(110,231,183,.08)';g.fillRect(0,yB,w,h-yB);
+  g.strokeStyle='#ff4d6d';g.lineWidth=2;g.beginPath();g.moveTo(0,yT);g.lineTo(w,yT);g.stroke();g.strokeStyle='#6ee7b7';g.beginPath();g.moveTo(0,yB);g.lineTo(w,yB);g.stroke();
+  g.strokeStyle='#ffc857';g.beginPath();g.moveTo(1,yT);g.lineTo(1,yB);g.stroke();g.strokeStyle='#4cc9f0';g.beginPath();g.moveTo(w-1,yT);g.lineTo(w-1,yB);g.stroke();
+  g.strokeStyle='#262b35';g.lineWidth=1;g.beginPath();g.moveTo(w/2,yT);g.lineTo(w/2,yB);g.moveTo(0,(yT+yB)/2);g.lineTo(w,(yT+yB)/2);g.stroke();
+  const zx=w*(1-ZI-.06),z0=h*(1-ZA1),z1=h*(1-ZA0);g.save();g.beginPath();g.rect(2,z0,zx,z1-z0);g.clip();g.fillStyle='rgba(255,200,87,'+(.1+.18*FE.zE)+')';g.fillRect(0,z0,zx+2,z1-z0);g.strokeStyle='rgba(255,200,87,.45)';g.beginPath();for(let k=-h;k<w;k+=12){g.moveTo(k,z1);g.lineTo(k+(z1-z0),z0)}g.stroke();g.restore();
+  g.strokeStyle='#ffc857';g.lineWidth=1.5;g.strokeRect(2,z0,zx,z1-z0);
+  g.font='13px sans-serif';g.textAlign='center';g.fillStyle='#ff9aac';g.fillText('强烈 · 难以坚持',w/2,yT/2+5);g.fillStyle='#6ee7b7';g.fillText('没感觉',w/2-20,yB+(h-yB)/2+5);
+  g.fillStyle='#ffc857';g.textAlign='left';g.fillText('有趣',zx+8,(yT+yB)/2-8);g.fillStyle='#4cc9f0';g.textAlign='right';g.fillText('普通',w-8,(yT+yB)/2-8);
+  const sx=w-30,sy=yB+(h-yB)/2;g.strokeStyle=FE.down?'#3a4250':'#6ee7b7';g.lineWidth=2;g.beginPath();g.arc(sx,sy,20,0,7);g.stroke();g.fillStyle=FE.down?'#5b6372':'#6ee7b7';g.textAlign='center';g.font='10px sans-serif';g.fillText('START',sx,sy+4);g.textAlign='left';
+  FE.trail=FE.trail.filter(q=>t-q[2]<4);g.beginPath();g.strokeStyle='rgba(232,234,240,.35)';g.lineWidth=3;FE.trail.forEach((q,k)=>k?g.lineTo(q[0]*w,q[1]*h):g.moveTo(q[0]*w,q[1]*h));g.stroke();
+  if(FE.down){g.beginPath();g.fillStyle=zoneOf(FE.i,FE.a)>.5?'#ffc857':'#e8eaf0';g.arc((1-FE.i)*w,(1-FE.a)*h,14,0,7);g.fill()}
+  const st=FE.resting?(FE.started?'⏸ 休息中（松手超过 1 秒）':'按住右下角 START 开始'):FE.down?(FE.t<FE.softU?'减弱中':'● 记录中'):'…';
+  const pc=T.totT>20?` · 目标区内 ${Math.round(100*(T.zoneT||0)/T.totT)}%（共 ${Math.floor(T.totT/60)} 分 ${Math.floor(T.totT%60)} 秒，含休息）`:'';
+  $('feelMsg').textContent=st+pc+(FE.trend&&!FE.resting?' · 当前波形：'+FE.trend:'')+(FE.msg?' · '+FE.msg:'');
+  $('feelInfo').textContent=`反应延迟约 ${T.lag.toFixed(1)} 秒`+(T.fresh?` · 新鲜期约 ${Math.round(T.fresh)} 秒`:'')+(T.runN?` · 通常连续 ${Math.round(T.run)} 秒后需要休息`+(T.restLen?`（约 ${Math.round(T.restLen)} 秒）`:''):'')}
+(()=>{const cv=$('feelPad'),mv=e=>{const r=cv.getBoundingClientRect(),x=clamp((e.clientX-r.left)/r.width),y=clamp((e.clientY-r.top)/r.height),t=nowS();
+    if(FE.lt)FE.sp=Math.max(FE.sp,Math.hypot(x-FE.lx,y-FE.ly)/Math.max(.02,t-FE.lt));FE.lx=x;FE.ly=y;FE.lt=t;FE.i=1-x;FE.a=1-y;FE.trail.push([x,y,t])};
+  cv.addEventListener('pointerdown',e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);FE.trail=[];FE.lt=0;mv(e);feelDown()});cv.addEventListener('pointermove',e=>{if(FE.down)mv(e)});
+  cv.addEventListener('pointerup',feelUp);cv.addEventListener('pointercancel',feelUp);cv.addEventListener('contextmenu',e=>e.preventDefault())})();
 function tunerWave(x){const dur=Math.round(pT(x)*10)/10,N=Math.round(dur*SR),tr={A:[],B:[],C:[]};for(let i=0;i<N;i++){const v=pf(x,i/SR);CH.forEach(c=>tr[c].push(Math.round(v[c]*100)/100))}
   return{id:uid(),name:'拟合最优·'+STG[S.t2.stage]+' '+new Date().toLocaleDateString(),dur,tr}}
 const STG={0:'热身',0.5:'进行中',1:'冲刺'};
@@ -576,8 +682,8 @@ function uiTuner(newRound){const T=S.t2,r=out.src==='tuner'?TU.r:null;if(!TU.cha
   $('tStageName').textContent='阶段：'+STG[T.stage];$('tBestDesc').textContent=describe(TU.champ.x);
   const lim=CH.filter(c=>T.ceil[c]<1).map(c=>`${CHN[c]} ≤ ${Math.round(T.ceil[c]*100)}%`);$('tCeil').innerHTML=lim.length?' 已学到的强度上限：'+lim.join('，')+' <a href="#" id="tCeilR" style="color:var(--acc)">清除</a>':'';
   const cr=$('tCeilR');if(cr)cr.onclick=e=>{e.preventDefault();T.ceil={A:1,B:1,C:1};save();uiTuner()};
-  $('tLive').hidden=!r;$('tGo').textContent=r?'暂停':'开始 / 继续';$('tBest').classList.toggle('on',out.src==='tuner'&&TU.best);
-  if(r){$('tNo').textContent=T.n+1;$('tWhy').textContent=r.why;$('fLine').hidden=!r.at;$('fDuel').hidden=r.type!=='duel';$('fRate').hidden=r.type!=='rate';
+  $('tLive').hidden=!r||r.type==='auto';$('tGo').textContent=r&&r.type!=='auto'?'暂停':'开始 / 继续';$('tAuto').classList.toggle('on',!!r&&r.type==='auto');$('tBest').classList.toggle('on',out.src==='tuner'&&TU.best);
+  if(r){$('tNo').textContent=T.n+1;$('tWhy').textContent=r.why;$('fLine').hidden=!r.at;$('fDuel').hidden=r.type!=='duel';$('fRate').hidden=r.type!=='rate';$('fFeel').hidden=r.type!=='feel';$('tCo').hidden=$('tTweakBox').hidden=r.type==='feel'||r.type==='auto';
     if(r.at){$('tSlL').textContent='← '+r.lo;$('tSlR').textContent=r.hi+' →'}
     if(r.type==='duel'){$('dA').classList.toggle('on',r.sel===0);$('dB').classList.toggle('on',r.sel===1)}
     $('tDesc').textContent=describe(TU.play);if(newRound)syncTweak()}
@@ -628,8 +734,9 @@ $('tPick').onclick=fbLine;
 $('dA').onclick=()=>{const r=TU.r;if(r&&r.type==='duel'){r.sel=0;setPlay(r.xs[0],true);uiTuner()}};
 $('dB').onclick=()=>{const r=TU.r;if(r&&r.type==='duel'){r.sel=1;setPlay(r.xs[1],true);uiTuner()}};
 $('tLive').addEventListener('click',e=>{const d=e.target.dataset;if(d.d)fbDuel(d.d);else if(d.co)coact(d.co);else if(d.hot)hot(d.hot)});
-$('tSkip').onclick=()=>nextRound();
-$('tGo').onclick=()=>{if(out.src==='tuner'&&TU.r)return setSource(null);tunerGo()};
+$('tSkip').onclick=()=>{if(TU.r&&TU.r.type==='feel'){newEp(pickNext(true),4,'new');uiTuner()}else nextRound()};
+$('tAuto').onclick=()=>{if(out.src==='tuner'&&TU.r&&TU.r.type==='auto')return setSource(null);if(!S.t2.n)return alert('先完成几轮反馈');if(!TU.model)buildModel();champion();if(out.src!=='tuner')setSource('tuner');TU.best=false;TU.r={type:'auto',why:''};feelStart(TU.champ.x);FE.resting=false;FE.resumeT=FE.t;uiTuner()};
+$('tGo').onclick=()=>{if(out.src==='tuner'&&TU.r&&TU.r.type!=='auto')return setSource(null);tunerGo()};
 $('tBest').onclick=()=>{if(out.src==='tuner'&&TU.best)return setSource(null);if(!S.t2.n)return alert('先完成几轮反馈');champion();TU.t0=TU.t0||nowS();if(out.src!=='tuner')setSource('tuner');TU.r=null;TU.best=true;setPlay(TU.champ.x,true);uiTuner()};
 $('tSave').onclick=()=>{if(!S.t2.n)return alert('先完成几轮反馈');champion();S.waves.push(tunerWave(TU.champ.x));save();renderWaves();alert('已保存到波形库')};
 $('tReset').onclick=()=>{if(confirm('清空全部拟合数据并重新开始？')){if(out.src==='tuner')setSource(null);S.t2=T2DEF();TU.model=TU.champ=null;TU.rc=0;save();location.reload()}};
@@ -646,9 +753,9 @@ bindRange('tExp',()=>S.t2.exp,v=>S.t2.exp=v,v=>v<30?'保守精修':v<65?'均衡'
 $('btnExp').onclick=()=>download('ycy-backup.json',JSON.stringify(S));$('btnImp').onclick=()=>$('impFile').click();
 $('impFile').onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text());if(!j.caps||!Array.isArray(j.waves)||!j.waves.every(validWave))throw 0;localStorage.setItem(KEY,JSON.stringify(j));location.reload()}catch(x){alert('不是有效的备份文件')}};
 showInfo();renderWaves();if(S.t2.n)buildModel();champion();uiTuner();uiSrc();drawScope();
-(function loop(){if($('t-play').classList.contains('on')){drawPad();drawGame()}else gameStep();requestAnimationFrame(loop)})();
+(function loop(){if($('t-play').classList.contains('on')){drawPad();drawGame()}else gameStep();if(TU.r&&TU.r.type==='feel'&&$('t-fit').classList.contains('on'))drawFeel();requestAnimationFrame(loop)})();
 addEventListener('resize',()=>{drawEd();drawChart()});
-window.YCY={CFG,S,out,ble,pkt,TU,pf,sane,randX,buildModel,champion,nextRound,fbLine,fbDuel,fbRate,coact,tick,setSource,SRC};
+window.YCY={FE,feelTick,feelDown,feelUp,feelOut,zoneOf,pT,CFG,S,out,ble,pkt,TU,pf,sane,randX,buildModel,champion,nextRound,fbLine,fbDuel,fbRate,coact,tick,setSource,SRC};
 </script>
 </body>
 </html>
