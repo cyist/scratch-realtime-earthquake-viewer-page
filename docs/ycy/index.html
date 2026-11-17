@@ -65,7 +65,7 @@ canvas{display:block;width:100%;touch-action:none;border-radius:10px;background:
 #log{font:12px/1.5 ui-monospace,monospace;color:var(--mut);max-height:150px;overflow:auto;white-space:pre-wrap}
 details summary{cursor:pointer;color:var(--mut);font-size:13px}
 .warn{border-color:#5a4a1a;background:#221d0e;color:#f3dfa4;font-size:13px}
-#pad{height:300px}#game{height:270px}#tChart{height:120px}
+#pad{height:300px}#game{height:270px}#tCo button{padding:6px 10px;font-size:13px}[hidden]{display:none!important}
 .tag{font-size:12px;padding:1px 8px;border-radius:99px;background:var(--card2);color:var(--mut)}
 </style>
 </head>
@@ -198,24 +198,44 @@ details summary{cursor:pointer;color:var(--mut);font-size:13px}
 <section id="t-fit">
   <div class="card">
     <h2>拟合最舒适波形</h2>
-    <p class="h">每一轮播放一组候选设定，你凭感觉打分。后台用高斯过程模型学习你的偏好，在"探索新区域"和"精修当前最优"之间自动权衡，可以无限轮地继续，数据自动保存，随时可以接着测。</p>
+    <p class="h">不用你懂参数：每一轮只需要拖一条滑杆停在最舒服的位置，或者在两组里挑一个。模型从这些选择里学习你的偏好，并自己决定下一步试什么。可以无限轮继续，数据自动保存。</p>
+    <div class="row"><label>当前阶段</label><span class="seg" id="tStage"><button data-v="0">热身</button><button data-v="0.5">进行中</button><button data-v="1">冲刺</button></span></div>
     <div class="row"><label>参与通道</label><span class="seg" id="tAct"><button data-v="A">旋转</button><button data-v="B">吮吸</button><button data-v="C">震动</button></span></div>
+    <div class="row"><label>反馈方式</label><span class="seg" id="tMode"><button data-v="auto">自动混合</button><button data-v="line">滑杆</button><button data-v="duel">二选一</button><button data-v="rate">打分</button></span></div>
     <div class="sl"><b>探索倾向</b><input type="range" id="tExp" min="0" max="100"><output id="tExpo"></output></div>
     <div class="row"><button id="tGo" class="pri">开始 / 继续</button><button id="tBest">播放当前最优</button><button id="tSave">最优存为波形</button><button id="tReset">重置</button></div>
+    <p class="h">不同阶段喜欢的东西通常不一样，所以每个阶段各学一个最优；感觉变了就切换阶段。</p>
   </div>
   <div class="card" id="tLive" hidden>
     <h2>第 <span id="tNo">1</span> 轮 <small id="tWhy"></small></h2>
     <p class="h" id="tDesc"></p>
-    <div class="rate" id="tRate"></div>
-    <p class="h" style="display:flex;justify-content:space-between"><span>1 = 很不舒服</span><span>10 = 非常舒服</span></p>
-    <div class="row"><label>哪里太强？</label><button data-hot="A" class="cA">旋转太强</button><button data-hot="B" class="cB">吮吸太强</button><button data-hot="C" class="cC">震动太强</button><span class="sp"></span><button id="tSkip">跳过</button></div>
-    <details id="tTweakBox"><summary>手动微调当前这组参数（改完再打分，同样计入学习）</summary><div id="tTweak"></div></details>
+    <div id="fLine">
+      <input type="range" id="tSl" min="0" max="100" style="width:100%;height:44px">
+      <p class="h" style="display:flex;justify-content:space-between;margin-top:0"><span id="tSlL"></span><span id="tSlR"></span></p>
+      <div class="row"><button id="tPick" class="pri" style="flex:1;padding:12px">停在这里最舒服</button></div>
+    </div>
+    <div id="fDuel">
+      <div class="row"><button id="dA" style="flex:1;padding:14px">感受 A</button><button id="dB" style="flex:1;padding:14px">感受 B</button></div>
+      <div class="row"><button data-d="a" class="pri" style="flex:1">A 更舒服</button><button data-d="b" class="pri" style="flex:1">B 更舒服</button><button data-d="tie">差不多</button><button data-d="bad">都不好</button></div>
+    </div>
+    <div id="fRate"><div class="rate" id="tRate"></div><p class="h" style="display:flex;justify-content:space-between"><span>1 = 很不舒服</span><span>10 = 非常舒服</span></p></div>
+    <div class="row" id="tCo"><label>想要…</label><button data-co="up">更强</button><button data-co="down">更弱</button><button data-co="fast">更快</button><button data-co="slow">更慢</button><button data-co="rest">多停顿</button><button data-co="norest">少停顿</button><button data-co="soft">更柔和</button><button data-co="sharp">更利落</button></div>
+    <div class="row"><label>太强？</label><button data-hot="A" class="cA">旋转</button><button data-hot="B" class="cB">吮吸</button><button data-hot="C" class="cC">震动</button><span class="sp"></span><button id="tSkip">跳过这轮</button></div>
+    <details id="tTweakBox"><summary>手动微调全部 25 个参数</summary><div id="tTweak"></div><div class="row"><button id="tTwOk" class="pri">微调后更舒服，采用</button></div></details>
   </div>
   <div class="card">
-    <h2>学习进度</h2>
-    <div class="stat"><div><b id="sN">0</b><small>已测轮数</small></div><div><b id="sMax">–</b><small>最高评分</small></div><div><b id="sPred">–</b><small>预测最优</small></div><div><b id="sConf">–</b><small>模型把握</small></div></div>
-    <canvas id="tChart" style="margin-top:10px"></canvas>
-    <p class="h">圆点 = 每轮评分，绿线 = 模型认为的最优值。<span id="tCeil"></span></p>
+    <h2>学习进度 <small id="tStageName"></small></h2>
+    <div class="stat"><div><b id="sN">0</b><small>反馈次数</small></div><div><b id="sPts">0</b><small>试过的设定</small></div><div><b id="sPred">–</b><small>最优预测分</small></div><div><b id="sConf">–</b><small>模型把握</small></div></div>
+    <p class="h" style="margin-top:10px">当前阶段的最优波形（一个段落）：<span id="tBestDesc"></span></p>
+    <canvas id="tPrev" style="height:90px"></canvas>
+    <canvas id="tChart" style="margin-top:8px;height:90px"></canvas>
+    <p class="h">下图：模型对"当前最优"的预测分随反馈次数的变化。<span id="tCeil"></span></p>
+    <details><summary>它是怎么工作的</summary>
+      <p class="h"><b>为什么不只打分：</b>人对"这两个哪个更舒服"的判断远比"这个值几分"稳定；分数会随状态漂移。所以主要用相对比较，打分只偶尔用来校准。</p>
+      <p class="h"><b>滑杆：</b>25 维空间里每轮只沿一条线搜索——有时是一个有名字的维度（如"震动出场比例"），有时是模型算出的最有希望的方向。你边感受边拖，停下的位置同时胜过线的两端，一次操作给出多条信息。</p>
+      <p class="h"><b>模型：</b>高斯过程偏好模型，把滑杆选择、二选一、打分、"想要更…"统一成一个效用函数（拉普拉斯近似），再用置信上界决定下一轮试哪里；旧反馈权重逐渐降低以适应感受变化。</p>
+      <p class="h"><b>参数：</b>全局节奏、利落度、起落偏向、段落长度、段内渐强、段内加速、全体停顿；每个通道各有强度、起伏、快慢倍率、时间差、出场比例、出场时机。通道强度可以学到 0（几乎不用）。</p>
+    </details>
   </div>
 </section>
 </main>
@@ -234,10 +254,9 @@ details summary{cursor:pointer;color:var(--mut);font-size:13px}
 const $=id=>document.getElementById(id), CH=['A','B','C'], CHN={A:'旋转伸缩',B:'吮吸',C:'震动'}, COL={A:'#ff8a5c',B:'#4cc9f0',C:'#c792ea'};
 const clamp=(v,a=0,b=1)=>v<a?a:v>b?b:v, nowS=()=>performance.now()/1000, uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const KEY='ycy.workshop.v1';
-const DEF={caps:{A:10,B:10,C:10},gain:100,rise:6,bGuard:8,aDir:'fwd',waves:null,map:{},padRel:'fade',
-  tuner:{obs:[],ceil:{A:1,B:1,C:1},act:{A:true,B:true,C:true},exp:45,tr:.25}};
+const DEF={caps:{A:10,B:10,C:10},gain:100,rise:6,bGuard:8,aDir:'fwd',waves:null,map:{},padRel:'fade'};
 let S=JSON.parse(JSON.stringify(DEF));
-try{const j=JSON.parse(localStorage.getItem(KEY)||'null');if(j){S=Object.assign(S,j);S.tuner=Object.assign(JSON.parse(JSON.stringify(DEF.tuner)),j.tuner||{})}}catch(e){}
+try{const j=JSON.parse(localStorage.getItem(KEY)||'null');if(j){S=Object.assign(S,j);delete S.tuner}}catch(e){}
 let saveT=0;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}},300)}
 function log(m){const el=$('log');el.textContent=(new Date().toLocaleTimeString()+' '+m+'\n'+el.textContent).slice(0,6000)}
 function seg(id,get,set){const el=$(id),upd=()=>el.querySelectorAll('button').forEach(b=>b.classList.toggle('on',get(b.dataset.v)));
@@ -373,7 +392,7 @@ function mapper(elId,key,inputs,def){if(!S.map[key])S.map[key]=def;const el=$(el
   el.querySelectorAll('select').forEach(s=>{s.value=S.map[key][s.dataset.c]||'';s.onchange=()=>{S.map[key][s.dataset.c]=s.value;save()}});
   return v=>({A:v[S.map[key].A]||0,B:v[S.map[key].B]||0,C:v[S.map[key].C]||0})}
 function uiSrc(){[['padGo','pad','启用触控板'],['gameGo','game','开始游戏'],['tiltGo','tilt','启用体感'],['micGo','mic','启用麦克风'],['btnRand','random','随机漫游']].forEach(([b,s,t])=>{$(b).classList.toggle('on',out.src===s);$(b).textContent=out.src===s?'停止':t});
-  $('tLive').hidden=out.src!=='tuner'||!TU.cur||TU.cur.best;renderWaves()}
+  uiTuner();renderWaves()}
 
 /* ---- 触控板 ---- */
 const pad={v:{x:0,y:0,d:0,s:0},down:false,trail:[],lx:0,ly:0,lt:0};
@@ -429,81 +448,146 @@ async function startMic(){try{mic.stream=await navigator.mediaDevices.getUserMed
   mic.ctx=new(window.AudioContext||window.webkitAudioContext)();mic.an=mic.ctx.createAnalyser();mic.an.fftSize=1024;mic.an.smoothingTimeConstant=.5;mic.buf=new Uint8Array(mic.an.frequencyBinCount);
   mic.ctx.createMediaStreamSource(mic.stream).connect(mic.an);setSource('mic')}catch(e){alert('无法使用麦克风：'+e.message)}}
 
-/* ================= 拟合：高斯过程贝叶斯优化 =================
-   12 维参数 → 三通道波形函数；用户评分 → GP 回归（Matérn 5/2，边际似然选超参，
-   旧样本噪声随时间放大以适应感受漂移）→ UCB 采集函数在全局随机点 + 信赖域局部扰动中选下一组。 */
-const PN=['旋转·强度','旋转·起伏','吮吸·强度','吮吸·起伏','震动·强度','震动·起伏','节奏周期','波形形状','吮吸相位','震动相位','渐强幅度','渐强长度'],D=12,BASE={A:0,B:2,C:4};
-const SHP=['sine','tri','saw','pulse'];
-function morph(s,p){const u=clamp(s)*2.999,i=Math.floor(u),f=u-i;return shapeFn(SHP[i],p)*(1-f)+shapeFn(SHP[i+1],p)*f}
-const pPeriod=x=>.8*Math.pow(15,x[6]), pCycles=x=>Math.round(2+x[11]*10);
-function pf(x,t){const P=pPeriod(x),env=1-x[10]*(.5+.5*Math.cos(2*Math.PI*t/(P*pCycles(x)))),ph=t/P,
-  ch=(b,d,s)=>(b*(1-d)+b*d*morph(x[7],ph+s))*env;return{A:ch(x[0],x[1],0),B:ch(x[2],x[3],x[8]),C:ch(x[4],x[5],x[9])}}
-function sane(x){const T=S.tuner;x=x.map(v=>clamp(v));CH.forEach(c=>{const i=BASE[c];if(!T.act[c]){x[i]=0;x[i+1]=0}else x[i]=Math.min(x[i],T.ceil[c])});
-  if(!T.act.B)x[8]=.5;if(!T.act.C)x[9]=.5;return x.map(v=>Math.round(v*1000)/1000)}
-const PRIMES=[2,3,5,7,11,13,17,19,23,29,31,37];function halton(i,b){let f=1,r=0;while(i>0){f/=b;r+=f*(i%b);i=Math.floor(i/b)}return r}
-function describe(x){const sh=['圆润','三角','锯齿','脉冲'][Math.round(clamp(x[7])*3)];return`周期 ${pPeriod(x).toFixed(1)}s · ${sh} · `+CH.filter(c=>S.tuner.act[c]).map(c=>`${CHN[c]} ${Math.round(x[BASE[c]]*100)}%`).join(' / ')+(x[10]>.15?` · 渐强 ${Math.round(x[10]*100)}%`:'')}
-// --- 线性代数 ---
-function chol(A,n){for(let i=0;i<n;i++)for(let j=0;j<=i;j++){let s=A[i*n+j];for(let k=0;k<j;k++)s-=A[i*n+k]*A[j*n+k];A[i*n+j]=i===j?Math.sqrt(s>1e-10?s:1e-10):s/A[j*n+j]}return A}
-function fsub(L,n,b){const y=new Float64Array(n);for(let i=0;i<n;i++){let s=b[i];for(let k=0;k<i;k++)s-=L[i*n+k]*y[k];y[i]=s/L[i*n+i]}return y}
-function bsub(L,n,y){const x=new Float64Array(n);for(let i=n-1;i>=0;i--){let s=y[i];for(let k=i+1;k<n;k++)s-=L[k*n+i]*x[k];x[i]=s/L[i*n+i]}return x}
-const dist=(a,b)=>{let s=0;for(let i=0;i<D;i++){const d=a[i]-b[i];s+=d*d}return Math.sqrt(s)}, m52=(r,l)=>{const a=2.236*r/l;return(1+a+a*a/3)*Math.exp(-a)};
-function gpFit(obs){ // obs: 全部观测（按时间顺序）；超过 220 条时保留最近 160 + 其余里评分最高的 60
-  let O=obs.map((o,i)=>({x:o.x,y:o.y,i}));const NT=obs.length;
-  if(O.length>220){const old=O.slice(0,-160).sort((a,b)=>b.y-a.y).slice(0,60);O=old.concat(O.slice(-160))}
-  const n=O.length,m=O.reduce((s,o)=>s+o.y,0)/n,sd=Math.max(.6,Math.sqrt(O.reduce((s,o)=>s+(o.y-m)**2,0)/n)),y=O.map(o=>(o.y-m)/sd);
-  const Dm=new Float64Array(n*n);for(let i=0;i<n;i++)for(let j=0;j<i;j++)Dm[i*n+j]=Dm[j*n+i]=dist(O[i].x,O[j].x);
-  const age=O.map(o=>1+(NT-1-o.i)/40);let best=null;
-  for(const ell of[.35,.55,.85,1.3,2])for(const nz of[.06,.2,.5]){const K=new Float64Array(n*n);
-    for(let i=0;i<n;i++){for(let j=0;j<i;j++)K[i*n+j]=K[j*n+i]=m52(Dm[i*n+j],ell);K[i*n+i]=1+nz*age[i]}
-    chol(K,n);const al=bsub(K,n,fsub(K,n,y));let lml=0;for(let i=0;i<n;i++)lml-=.5*y[i]*al[i]+Math.log(K[i*n+i]);
-    lml-=.5*((Math.log(ell)-Math.log(.85))**2)/.5; // 对长度尺度的弱先验，样本少时防止过拟合
-    if(!best||lml>best.lml)best={lml,L:K,al,ell,nz}}
-  const M={n,X:O.map(o=>o.x),m,sd,...best};
-  M.pred=x=>{const k=new Float64Array(n);for(let i=0;i<n;i++)k[i]=m52(dist(x,M.X[i]),M.ell);let mu=0;for(let i=0;i<n;i++)mu+=k[i]*M.al[i];const v=fsub(M.L,n,k);let q=0;for(let i=0;i<n;i++)q+=v[i]*v[i];return[mu,Math.sqrt(Math.max(1e-9,1-q))]};
-  return M}
-const TU={cur:null,prev:null,t0:0,model:null,best:null};
+/* ================= 拟合：偏好学习 =================
+   25 维参数 → 三通道波形函数（含通道轮流出场、停顿、渐强、加速、时间差）。
+   反馈：滑杆线搜索 / 二选一 / 打分 / "想要更…"（coactive），统一进一个高斯过程效用模型
+   （Matérn 5/2，评分=高斯似然，比较=probit 似然，拉普拉斯近似），UCB 选下一轮。阶段作为上下文维度。 */
+const D=25,RATES=[.25,.5,1,2,3],CB={A:7,B:13,C:19},CHS={A:'旋转',B:'吮吸',C:'震动'};
+const PN=['节奏周期','利落度','起落偏向','段落长度','段内渐强','段内加速','全体停顿',...CH.flatMap(c=>['强度','起伏','快慢倍率','时间差','出场比例','出场时机'].map(n=>CHS[c]+'·'+n))];
+const DEFX=[.4,.1,.5,.45,0,0,0, .4,.6,.5,0,1,.5, .35,.6,.5,.33,1,.5, .4,.6,.5,.66,1,.5];
+const T2DEF=()=>({pts:[],rates:[],pairs:[],n:0,hist:[],ceil:{A:1,B:1,C:1},act:{A:true,B:true,C:true},exp:45,tr:.2,mode:'auto',stage:.5,ell:.9});
+if(!S.t2)S.t2=T2DEF();
+const TU={r:null,play:null,prevX:null,sw:0,t0:0,model:null,champ:null,force:null,lastAx:[],rc:0,best:false};
+function wshape(s,k,p){p-=Math.floor(p);const kk=.15+.7*k,pw=p<kk?.5*p/kk:.5+.5*(p-kk)/(1-kk),u=clamp(s)*1.999,i=Math.floor(u),f=u-i,
+  sh=[.5-.5*Math.cos(2*Math.PI*pw),1-Math.abs(2*pw-1),clamp((.25-Math.abs(pw-.5))*14+.5)];return sh[i]*(1-f)+sh[i+1]*f}
+const pP=x=>.6*Math.pow(20,x[0]),pT=x=>8*Math.pow(8,x[3]);
+function pf(x,t){const P=pP(x),T=pT(x),tau=((t%T)+T)%T,Ta=T*(1-.4*x[6]),o={A:0,B:0,C:0};if(tau>=Ta)return o;
+  const v=tau/Ta,bu=1-x[4]*(1-v),ph=(tau+.75*x[5]*tau*tau/Ta)/P,ge=x[6]>.02?clamp(Math.min(tau,Ta-tau)/.4):1;
+  for(const c of CH){const b=CB[c],lv=x[b];if(lv<=0)continue;const dp=x[b+1],ra=.2+.8*x[b+4];let win=1;
+    if(ra<.97){const d=((v-x[b+5])%1+1)%1;win=d<ra?clamp(Math.min(d,ra-d)*Ta/.5):0}
+    o[c]=lv*(1-dp+dp*wshape(x[1],x[2],ph*RATES[Math.round(x[b+2]*4)]+x[b+3]))*bu*ge*win}return o}
+// 规范化：把不起作用的条件参数固定下来，降低有效维度
+function sane(x){const T=S.t2;x=x.slice(0,D).map(v=>clamp(v));
+  for(const c of CH){const b=CB[c];if(!T.act[c]||x[b]<.04){x[b]=0;x[b+1]=x[b+2]=x[b+3]=x[b+5]=.5;x[b+4]=1;continue}
+    x[b]=Math.min(x[b],T.ceil[c]);x[b+2]=Math.round(x[b+2]*4)/4;if(x[b+1]<.05){x[b+1]=0;x[b+2]=.5;x[b+3]=.5}if(x[b+4]>.96){x[b+4]=1;x[b+5]=.5}}
+  if(!CH.some(c=>x[CB[c]]>0)){const c=CH.find(c=>T.act[c]);x[CB[c]]=Math.min(.3,T.ceil[c])}
+  return x.map(v=>Math.round(v*1000)/1000)}
 function gauss(){return Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(2*Math.PI*Math.random())}
-function tunerModel(){const T=S.tuner;if(T.obs.length<3){TU.model=null;TU.best=null;return}
-  const M=TU.model=gpFit(T.obs);let b=null;const seen=T.obs.slice(-220);
-  seen.forEach(o=>{const[mu,s]=M.pred(o.x),v=mu-.4*s;if(!b||v>b.v)b={v,mu,s,x:o.x}});
-  // 在最优点附近做一次局部爬升，让"预测最优"不局限于已测过的点
-  for(let k=0;k<200;k++){const x=sane(b.x.map(v=>v+(Math.random()<.4?gauss()*.06:0))),[mu,s]=M.pred(x),v=mu-.4*s;if(v>b.v)b={v,mu,s,x}}
-  TU.best={x:b.x,mu:b.mu*M.sd+M.m,sd:b.s*M.sd,conf:clamp(1-b.s)}}
-function tunerNext(){const T=S.tuner,n=T.obs.length;
-  if(n<6){const k=n+1+(T.seed||(T.seed=1+Math.floor(Math.random()*50)));const x=PRIMES.map(b=>halton(k,b));CH.forEach(c=>x[BASE[c]]=.25+.45*x[BASE[c]]);return{x:sane(x),why:'初始探索'}}
-  if(!TU.model)tunerModel();const M=TU.model;
-  if(n%9===8&&TU.best)return{x:TU.best.x.slice(),why:'复测当前最优（校准感受漂移）'};
-  const beta=.2+3*(T.exp/100)**1.5,tops=T.obs.slice(-220).map(o=>({x:o.x,mu:M.pred(o.x)[0]})).sort((a,b)=>b.mu-a.mu).slice(0,5);if(TU.best)tops.unshift({x:TU.best.x});
-  let bx=null,bv=-1e9,loc=false;const nG=Math.round(200+500*T.exp/100);
-  for(let k=0;k<nG+700;k++){let x;const g=k<nG;
-    if(g)x=Array.from({length:D},()=>Math.random());
-    else{const c=tops[Math.floor(Math.random()**2*tops.length)].x,pm=.3+.5*Math.random();x=c.map(v=>Math.random()<pm?v+gauss()*T.tr:v)}
-    x=sane(x);const[mu,s]=M.pred(x),v=mu+beta*s+gauss()*.03;if(v>bv){bv=v;bx=x;loc=!g}}
-  return{x:bx,why:loc?'精修：在高分区域附近微调':'探索：尝试模型还不了解的区域'}}
-function tunerStart(next){TU.prev=TU.cur;TU.cur=next||tunerNext();TU.t0=nowS();if(out.src!=='tuner')setSource('tuner');uiTuner()}
-SRC.tuner={sample(t){if(!TU.cur)return null;const a=pf(TU.cur.x,t-TU.t0),k=clamp((t-TU.t0)/1.2);if(k>=1||!TU.prev)return{A:a.A*k,B:a.B*k,C:a.C*k};
-  const p=pf(TU.prev.x,t-TU.prev.t0||0);return{A:p.A*(1-k)+a.A*k,B:p.B*(1-k)+a.B*k,C:p.C*(1-k)+a.C*k}},stop(){TU.cur=TU.prev=null;uiTuner()}};
-function tunerRate(y,hot){const T=S.tuner;if(!TU.cur||TU.cur.best)return;const x=TU.cur.x.slice(),mx=T.obs.reduce((m,o)=>Math.max(m,o.y),0);
-  if(hot){T.ceil[hot]=Math.max(.15,Math.round(Math.min(T.ceil[hot],x[BASE[hot]]*.88)*100)/100);y=Math.min(y,3)}
-  T.tr=y>=mx?Math.min(.35,T.tr*1.25):Math.max(.03,T.tr*.92);
-  T.obs.push({x,y});tunerModel();T.obs[T.obs.length-1].bm=TU.best?Math.round(TU.best.mu*100)/100:null;save();
-  TU.cur.t0=TU.t0;tunerStart()}
-function tunerWave(x){const P=pPeriod(x);let m=pCycles(x);if(x[10]<.05)m=Math.max(1,Math.round(8/P));while(P*m>180&&m>1)m--;const dur=Math.round(P*m*10)/10,N=Math.round(dur*SR),tr={A:[],B:[],C:[]};
-  for(let i=0;i<N;i++){const v=pf(x,i/N*P*m);CH.forEach(c=>tr[c].push(Math.round(v[c]*100)/100))}return{id:uid(),name:'拟合最优 '+new Date().toLocaleDateString(),dur,tr}}
-function uiTuner(){const T=S.tuner,n=T.obs.length;$('sN').textContent=n;$('sMax').textContent=n?Math.max(...T.obs.map(o=>o.y)):'–';
-  $('sPred').textContent=TU.best?TU.best.mu.toFixed(1):'–';$('sConf').textContent=TU.best?Math.round(TU.best.conf*100)+'%':'–';
-  const lim=CH.filter(c=>T.ceil[c]<1).map(c=>`${CHN[c]} ≤ ${Math.round(T.ceil[c]*100)}%`);$('tCeil').innerHTML=lim.length?'已学到的强度上限：'+lim.join('，')+' <a href="#" id="tCeilR" style="color:var(--acc)">清除</a>':'';
+function randX(){const x=Array.from({length:D},()=>Math.random());if(Math.random()<.5)x[6]=0;if(Math.random()<.4)x[4]=0;if(Math.random()<.5)x[5]=0;
+  for(const c of CH){const b=CB[c];x[b]=Math.random()<.2?0:.2+.7*Math.random();if(Math.random()<.5)x[b+4]=1}return sane(x)}
+function perturb(c,tr){const pm=.12+.35*Math.random();return sane(c.map(v=>Math.random()<pm?v+gauss()*tr:v))}
+function describe(x){const on=CH.filter(c=>S.t2.act[c]);return`周期 ${pP(x).toFixed(1)}s · 段落 ${Math.round(pT(x))}s · `+on.map(c=>{const b=CB[c];return CHS[c]+' '+(x[b]>0?Math.round(x[b]*100)+'%'+(x[b+4]<1?`(出场${Math.round((.2+.8*x[b+4])*100)}%)`:''):'关')}).join(' / ')+(x[6]>.05?` · 停顿 ${Math.round(x[6]*40)}%`:'')+(x[4]>.15?' · 渐强':'')+(x[5]>.15?' · 加速':'')}
+// --- 数值 ---
+const dist=(a,b)=>{let s=0;for(let i=0;i<D;i++){const d=a[i]-b[i];s+=d*d}const c=.7*((a[D]||0)-(b[D]||0));return Math.sqrt(s+c*c)},m52=(r,l)=>{const a=2.236*r/l;return(1+a+a*a/3)*Math.exp(-a)};
+function lu(A,n){const p=new Int32Array(n);let ld=0;for(let i=0;i<n;i++)p[i]=i;
+  for(let k=0;k<n;k++){let m=k,mx=Math.abs(A[k*n+k]);for(let i=k+1;i<n;i++){const v=Math.abs(A[i*n+k]);if(v>mx){mx=v;m=i}}
+    if(m!==k){for(let j=0;j<n;j++){const t=A[k*n+j];A[k*n+j]=A[m*n+j];A[m*n+j]=t}const t=p[k];p[k]=p[m];p[m]=t}
+    const d=A[k*n+k]||1e-12;ld+=Math.log(Math.abs(d));for(let i=k+1;i<n;i++){const f=A[i*n+k]/=d;if(f)for(let j=k+1;j<n;j++)A[i*n+j]-=f*A[k*n+j]}}return{p,ld}}
+function lusolve(A,n,p,b){const x=new Float64Array(n);for(let i=0;i<n;i++){let s=b[p[i]];for(let k=0;k<i;k++)s-=A[i*n+k]*x[k];x[i]=s}
+  for(let i=n-1;i>=0;i--){let s=x[i];for(let k=i+1;k<n;k++)s-=A[i*n+k]*x[k];x[i]=s/(A[i*n+i]||1e-12)}return x}
+function lphi(z){ // [log Φ(z), φ(z)/Φ(z)]
+  if(z<-3.5){const q=1-1/(z*z)+3/(z*z*z*z);return[-.5*z*z-Math.log(-z)-.9189+Math.log(q),-z/q]}
+  const t=1/(1+.3275911*Math.abs(z)/Math.SQRT2),e=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-.284496736)*t+.254829592)*t*Math.exp(-z*z/2),P=z>=0?.5*(1+e):.5*(1-e);
+  return[Math.log(P),Math.exp(-z*z/2)/2.5066/P]}
+const SR2=.35*.35,SPc=.57,CFG={ard:false,ck:1,wb:1};
+function likT(f,n,R,Pr){const g=new Float64Array(n),W=new Float64Array(n*n);let ll=0;
+  for(const r of R){const d=r.y-f[r.i],w=r.w/SR2;ll-=.5*w*d*d;g[r.i]+=w*d;W[r.i*n+r.i]+=w}
+  for(const q of Pr){const z=(f[q.a]-f[q.b])/SPc,[lp,r]=lphi(z),gg=q.w*r/SPc,h=q.w*r*(r+z)/(SPc*SPc);ll+=q.w*lp;g[q.a]+=gg;g[q.b]-=gg;W[q.a*n+q.a]+=h;W[q.b*n+q.b]+=h;W[q.a*n+q.b]-=h;W[q.b*n+q.a]-=h}
+  return{g,W,ll}}
+function mulv(K,n,a){const f=new Float64Array(n);for(let i=0;i<n;i++){let s=0;for(let j=0;j<n;j++)s+=K[i*n+j]*a[j];f[i]=s}return f}
+function IWK(W,K,n){const A=new Float64Array(n*n);for(let i=0;i<n;i++){for(let k=0;k<n;k++){const w=W[i*n+k];if(w)for(let j=0;j<n;j++)A[i*n+j]+=w*K[k*n+j]}A[i*n+i]+=1}return A}
+function laplace(K,n,R,Pr,full){let f=new Float64Array(n),a=new Float64Array(n),obj=likT(f,n,R,Pr).ll;
+  for(let it=0;it<25;it++){const{g,W}=likT(f,n,R,Pr),b=mulv(W,n,f);for(let i=0;i<n;i++)b[i]+=g[i];
+    const A=IWK(W,K,n),{p}=lu(A,n),an=lusolve(A,n,p,b);let st=1,ok=false,fa,aa,o2;
+    for(let h=0;h<8;h++){aa=a.map((v,i)=>v+st*(an[i]-v));fa=mulv(K,n,aa);let q=0;for(let i=0;i<n;i++)q+=aa[i]*fa[i];o2=likT(fa,n,R,Pr).ll-.5*q;if(o2>=obj-1e-9){ok=true;break}st*=.5}
+    if(!ok)break;const dl=o2-obj;f=fa;a=aa;obj=o2;if(dl<1e-5)break}
+  const{W}=likT(f,n,R,Pr),A=IWK(W,K,n),{p,ld}=lu(A,n);if(!full)return{ev:obj-.5*ld};const B=new Float64Array(n*n),col=new Float64Array(n);
+  for(let j=0;j<n;j++){for(let i=0;i<n;i++)col[i]=W[i*n+j];const s=lusolve(A,n,p,col);for(let i=0;i<n;i++)B[i*n+j]=s[i]}
+  return{a,B,ev:obj-.5*ld}}
+function buildModel(){const T=S.t2,items=[...T.rates.map(r=>({t:r.t,r})),...T.pairs.map(p=>({t:p.t,p}))].sort((a,b)=>b.t-a.t);
+  const idx=new Map(),X=[],R=[],Pr=[],id=i=>{if(!idx.has(i)){idx.set(i,X.length);X.push(T.pts[i])}return idx.get(i)};
+  for(const it of items){if(X.length>215)break;const w=Math.max(.35,1/(1+(T.n-it.t)/120));
+    if(it.r)R.push({i:id(it.r.i),y:(it.r.y-5.5)/2,w});else Pr.push({a:id(it.p.a),b:id(it.p.b),w:w*(it.p.w||1)})}
+  const n=X.length;if(!n){TU.model=null;return}
+  if(!T.dw||T.dw.length!==D+1){T.dw=Array(D+1).fill(1);T.dw[D]=.7}
+  const distw=(a,b,dw)=>{let q=0;for(let i=0;i<=D;i++){const d=(a[i]-b[i])*dw[i];q+=d*d}return Math.sqrt(q)};
+  const fit=(dw,ell,full)=>{const K=new Float64Array(n*n);for(let i=0;i<n;i++){K[i*n+i]=1;for(let j=0;j<i;j++)K[i*n+j]=K[j*n+i]=m52(distw(X[i],X[j],dw),ell)}
+    const r=laplace(K,n,R,Pr,full);r.ev-=Math.log(ell)**2+.15*dw.reduce((q,w)=>q+Math.log(w)**2,0);return r};
+  let ell=T.ell,ev=null;if(T.n%6===0||!TU.model){for(const l of[.6,.9,1.4,2.1]){const r=fit(T.dw,l,false);if(ev===null||r.ev>ev){ev=r.ev;ell=l}}}
+  // 逐维相关性（ARD）：每次反馈轮流检验几个维度，证据明显变好才接受——不重要的维度会被自动"压扁"
+  if(CFG.ard&&T.n>=12){if(ev===null)ev=fit(T.dw,ell,false).ev;for(let q=0;q<4;q++){const i=T.ai=((T.ai||0)+1)%(D+1);for(const f of[.6,1.6]){const dw=T.dw.slice();dw[i]=clamp(dw[i]*f,.15,3);if(dw[i]===T.dw[i])continue;const r=fit(dw,ell,false);if(r.ev>ev+.3){ev=r.ev;T.dw=dw}}}}
+  T.ell=ell;const{a,B}=fit(T.dw,ell,true),k=new Float64Array(n),dw=T.dw.slice();
+  TU.model={n,X,ell,pred(x,c){const q=x.length>D?x:x.concat([c]);let mu=0;for(let i=0;i<n;i++){k[i]=m52(distw(q,X[i],dw),ell);mu+=k[i]*a[i]}
+    let v=0;for(let i=0;i<n;i++){let s=0;for(let j=0;j<n;j++)s+=B[i*n+j]*k[j];v+=k[i]*s}return[mu,Math.sqrt(clamp(1-v,1e-6,1))]}}}
+function champion(){const T=S.t2,M=TU.model,c=T.stage,d0=sane(DEFX);if(!M){TU.champ={x:d0,mu:0,sd:1};return}
+  let b=null;const tryx=x=>{const[mu,sd]=M.pred(x,c),v=mu-CFG.ck*sd;if(!b||v>b.v)b={v,mu,sd,x}};
+  M.X.forEach(p=>tryx(sane(p)));tryx(d0);for(let k=0;k<150;k++)tryx(perturb(b.x,.05));TU.champ=b}
+// --- 有名字的搜索方向 ---
+function axes(base){const A=[{n:'整体强度',lo:'更弱',hi:'更强',s0:.5,at:s=>{const x=base.slice();CH.forEach(c=>x[CB[c]]*=.4+1.2*s);return sane(x)}}];
+  const one=(i,n,lo,hi)=>A.push({n,lo,hi,s0:base[i],at:s=>{const x=base.slice();x[i]=s;return sane(x)}});
+  one(0,'节奏快慢','快','慢');one(1,'利落度','圆润柔和','干脆利落');one(2,'起落偏向','急起缓落','缓起急落');one(3,'段落长度','短段落','长段落');one(4,'段内渐强','始终一样','由弱到强');one(5,'段内加速','匀速','越来越快');one(6,'全体停顿','不停','每段后长停顿');
+  const na=CH.filter(c=>base[CB[c]]>0).length;
+  for(const c of CH){if(!S.t2.act[c])continue;const b=CB[c],N=CHN[c];one(b,N+'·强度','关 / 弱','强');if(base[b]<=0)continue;one(b+1,N+'·起伏','平稳持续','大起大落');
+    if(base[b+1]>0){one(b+2,N+'·快慢倍率','慢 4 倍','快 3 倍');if(na>1)one(b+3,N+'·时间差','提前','滞后')}
+    one(b+4,N+'·出场比例','偶尔出场','一直都在');if(base[b+4]<1)one(b+5,N+'·出场时机','段落开头','段落末尾')}return A}
+function setPlay(x,fade){TU.prevX=fade&&TU.play?TU.play:null;TU.play=x;TU.sw=nowS()}
+function nextRound(){const T=S.t2;if(!TU.model&&T.n)buildModel();champion();const base=TU.force||TU.champ.x;TU.force=null;TU.best=false;
+  let type=T.mode;if(type==='auto')type=T.n<3?'duel':['axis','line','axis','line','duel','axis','line','axis','line','rate'][TU.rc%10];else if(type==='line')type=TU.rc%2?'line':'axis';TU.rc++;
+  const M=TU.model,c=T.stage,beta=.3+2.5*(T.exp/100)**1.5,ucb=x=>{if(!M)return Math.random();const[m,s]=M.pred(x,c);return m+beta*s};
+  if(type==='line'&&!M)type='axis';let r;
+  if(type==='axis'){const A=axes(base).filter(a=>!TU.lastAx.includes(a.n)),u0=ucb(base);let b=null;
+    A.forEach(a=>{let sc=-1e9;for(const s of[0,.25,.5,.75,1])sc=Math.max(sc,ucb(a.at(s)));sc+=-u0+Math.random()*(M?.15:1);if(!b||sc>b.sc)b={sc,a}});
+    const a=b.a;TU.lastAx.push(a.n);if(TU.lastAx.length>4)TU.lastAx.shift();r={type,base,at:a.at,s0:a.s0,lo:a.lo,hi:a.hi,why:'滑杆 · 只改变「'+a.n+'」'}}
+  else if(type==='line'){let e=null,bv=-1e9;for(let k=0;k<600;k++){const x=k<100?randX():perturb(base,T.tr*1.5);if(dist(x,base)<.12)continue;const v=ucb(x)+gauss()*.02;if(v>bv){bv=v;e=x}}
+    if(!e)e=randX();const L=base.map((v,i)=>v-.35*(e[i]-v)),Rr=base.map((v,i)=>v+1.15*(e[i]-v));
+    const top=base.map((v,i)=>[Math.abs(e[i]-v),i]).sort((a,b)=>b[0]-a[0]).slice(0,3).filter(q=>q[0]>.03).map(q=>PN[q[1]]+(e[q[1]]>base[q[1]]?'↑':'↓')).join('、');
+    r={type,base,at:s=>sane(L.map((v,i)=>v+(Rr[i]-v)*s)),s0:.35/1.5,lo:'反方向',hi:'模型建议方向',why:'滑杆 · 模型建议的组合方向'+(top?'（'+top+'）':'')}}
+  else if(type==='duel'){let e=null,bv=-1e9,far=T.n<3?.6:.3;for(let k=0;k<600;k++){const x=k<300?randX():perturb(base,.25);if(dist(x,base)<far)continue;const v=ucb(x)+gauss()*.02;if(v>bv){bv=v;e=x}}
+    if(!e)e=randX();const bi=Math.random()<.5?0:1;r={type,base,bi,xs:bi?[e,base]:[base,e],sel:0,why:'二选一 · 当前最优 vs 新挑战者（顺序随机）'}}
+  else{let x=base;if(TU.rc%20>=10&&M){let bv=-1e9;for(let k=0;k<300;k++){const y=perturb(base,T.tr),v=ucb(y);if(v>bv){bv=v;x=y}}}r={type:'rate',base,x,why:'打分 · 校准绝对感受'}}
+  TU.r=r;setPlay(r.type==='duel'?r.xs[0]:r.type==='rate'?r.x:r.at(r.s0),true);if(r.type!=='duel'&&r.type!=='rate')$('tSl').value=Math.round(r.s0*100);uiTuner(true)}
+SRC.tuner={sample(t){if(!TU.play)return null;const a=pf(TU.play,t-TU.t0),k=clamp((t-TU.sw)/.8);if(k>=1||!TU.prevX)return a;const p=pf(TU.prevX,t-TU.t0);
+  return{A:p.A*(1-k)+a.A*k,B:p.B*(1-k)+a.B*k,C:p.C*(1-k)+a.C*k}},stop(){TU.r=null;TU.play=TU.prevX=null;TU.best=false;uiTuner()}};
+// --- 反馈记录 ---
+const PK=new Map();function addPt(x){const T=S.t2,p=x.slice(0,D).concat([T.stage]),key=p.join();if(PK.size!==T.pts.length){PK.clear();T.pts.forEach((q,i)=>PK.set(q.join(),i))}
+  let i=PK.get(key);if(i==null){i=T.pts.push(p)-1;PK.set(key,i)}return i}
+const addPair=(a,b,w=1)=>S.t2.pairs.push({a,b,w,t:S.t2.n}),addRate=(i,y)=>S.t2.rates.push({i,y,t:S.t2.n});
+function compact(){const T=S.t2;if(T.pts.length<900)return;const cut=[...T.rates.map(r=>r.t),...T.pairs.map(p=>p.t)].sort((a,b)=>b-a)[400]||0;
+  T.rates=T.rates.filter(r=>r.t>=cut);T.pairs=T.pairs.filter(p=>p.t>=cut);const mp=new Map(),np=[],id=i=>{if(!mp.has(i)){mp.set(i,np.length);np.push(T.pts[i])}return mp.get(i)};
+  T.rates.forEach(r=>r.i=id(r.i));T.pairs.forEach(p=>{p.a=id(p.a);p.b=id(p.b)});T.pts=np;PK.clear()}
+function commit(win){const T=S.t2;T.n++;T.tr=win?Math.min(.3,T.tr*1.15):Math.max(.04,T.tr*.93);buildModel();champion();
+  T.hist.push(+clamp(5.5+2*TU.champ.mu,1,10).toFixed(2));if(T.hist.length>400)T.hist.shift();compact();save();nextRound()}
+function fbLine(){const r=TU.r;if(!r||!r.at)return;const s=$('tSl').value/100,ip=addPt(r.at(s)),moved=Math.abs(s-r.s0)>.06;
+  if(s>.04)addPair(ip,addPt(r.at(0)));if(s<.96)addPair(ip,addPt(r.at(1)));if(moved)addPair(ip,addPt(r.base),CFG.wb);commit(moved)}
+function fbDuel(res){const r=TU.r;if(!r||r.type!=='duel')return;const ia=addPt(r.xs[0]),ib=addPt(r.xs[1]);
+  if(res==='a')addPair(ia,ib);else if(res==='b')addPair(ib,ia);else if(res==='tie'){addPair(ia,ib,.5);addPair(ib,ia,.5)}else{addRate(ia,3);addRate(ib,3)}
+  commit((res==='a'&&r.bi!==0)||(res==='b'&&r.bi!==1))}
+function fbRate(y){if(!TU.r||TU.r.type!=='rate')return;addRate(addPt(TU.play),y);commit(y>=7)}
+function coact(op){if(!TU.r||!TU.play)return;const x=TU.play.slice(),lv=f=>CH.forEach(c=>x[CB[c]]=clamp(x[CB[c]]*f)),ra=d=>CH.forEach(c=>{if(x[CB[c]]>0)x[CB[c]+4]=clamp(x[CB[c]+4]+d)});
+  ({up:()=>lv(1.18),down:()=>lv(.85),fast:()=>x[0]-=.09,slow:()=>x[0]+=.09,rest:()=>{x[6]>.8?ra(-.2):x[6]+=.25},norest:()=>{x[6]>.05?x[6]-=.25:ra(.25)},soft:()=>{x[1]-=.25;CH.forEach(c=>x[CB[c]+1]-=.1)},sharp:()=>{x[1]+=.25;CH.forEach(c=>x[CB[c]+1]+=.1)}})[op]();
+  const y=sane(x);if(dist(y,TU.play)<.005)return;addPair(addPt(y),addPt(TU.play),.6);TU.force=y;commit(true)}
+function hot(c){if(!TU.r||!TU.play)return;const T=S.t2,old=TU.play,lv=old[CB[c]];if(lv<=0)return;T.ceil[c]=Math.max(.15,Math.round(Math.min(T.ceil[c],lv*.85)*100)/100);
+  const y=sane(old);addPair(addPt(y),addPt(old));TU.force=y;commit(false)}
+function tunerWave(x){const dur=Math.round(pT(x)*10)/10,N=Math.round(dur*SR),tr={A:[],B:[],C:[]};for(let i=0;i<N;i++){const v=pf(x,i/SR);CH.forEach(c=>tr[c].push(Math.round(v[c]*100)/100))}
+  return{id:uid(),name:'拟合最优·'+STG[S.t2.stage]+' '+new Date().toLocaleDateString(),dur,tr}}
+const STG={0:'热身',0.5:'进行中',1:'冲刺'};
+function uiTuner(newRound){const T=S.t2,r=out.src==='tuner'?TU.r:null;if(!TU.champ)champion();
+  $('sN').textContent=T.n;$('sPts').textContent=T.pts.length;$('sPred').textContent=TU.model?clamp(5.5+2*TU.champ.mu,1,10).toFixed(1):'–';$('sConf').textContent=TU.model?Math.round((1-TU.champ.sd)*100)+'%':'–';
+  $('tStageName').textContent='阶段：'+STG[T.stage];$('tBestDesc').textContent=describe(TU.champ.x);
+  const lim=CH.filter(c=>T.ceil[c]<1).map(c=>`${CHN[c]} ≤ ${Math.round(T.ceil[c]*100)}%`);$('tCeil').innerHTML=lim.length?' 已学到的强度上限：'+lim.join('，')+' <a href="#" id="tCeilR" style="color:var(--acc)">清除</a>':'';
   const cr=$('tCeilR');if(cr)cr.onclick=e=>{e.preventDefault();T.ceil={A:1,B:1,C:1};save();uiTuner()};
-  const live=out.src==='tuner'&&TU.cur&&!TU.cur.best;$('tLive').hidden=!live;$('tBest').classList.toggle('on',!!(out.src==='tuner'&&TU.cur&&TU.cur.best));
-  $('tGo').textContent=live?'暂停':'开始 / 继续';
-  if(live){$('tNo').textContent=n+1;$('tWhy').textContent=TU.cur.why;$('tDesc').textContent=describe(TU.cur.x);
-    $('tTweak').querySelectorAll('input').forEach((el,i)=>{el.value=TU.cur.x[i]*100;el.disabled=(i<6&&!T.act[CH[i>>1]])||(i===8&&!T.act.B)||(i===9&&!T.act.C)})}
-  drawChart()}
-function drawChart(){const f=fitCanvas($('tChart'));if(!f)return;const{g,w,h}=f,O=S.tuner.obs,n=O.length;g.clearRect(0,0,w,h);
-  g.strokeStyle='#1c2029';g.fillStyle='#8b93a3';g.font='10px sans-serif';[1,5,10].forEach(v=>{const y=h-8-(v-1)/9*(h-16);g.beginPath();g.moveTo(18,y);g.lineTo(w,y);g.stroke();g.fillText(v,4,y+3)});
-  if(!n)return;const X=i=>22+(n>1?i/(n-1):.5)*(w-30),Y=v=>h-8-(clamp(v,1,10)-1)/9*(h-16);
-  O.forEach((o,i)=>{g.beginPath();g.fillStyle='rgba(232,234,240,.55)';g.arc(X(i),Y(o.y),n>150?1.5:2.5,0,7);g.fill()});
-  g.beginPath();g.strokeStyle='#6ee7b7';g.lineWidth=2;let st=false;O.forEach((o,i)=>{if(o.bm==null)return;st?g.lineTo(X(i),Y(o.bm)):g.moveTo(X(i),Y(o.bm));st=true});g.stroke()}
+  $('tLive').hidden=!r;$('tGo').textContent=r?'暂停':'开始 / 继续';$('tBest').classList.toggle('on',out.src==='tuner'&&TU.best);
+  if(r){$('tNo').textContent=T.n+1;$('tWhy').textContent=r.why;$('fLine').hidden=!r.at;$('fDuel').hidden=r.type!=='duel';$('fRate').hidden=r.type!=='rate';
+    if(r.at){$('tSlL').textContent='← '+r.lo;$('tSlR').textContent=r.hi+' →'}
+    if(r.type==='duel'){$('dA').classList.toggle('on',r.sel===0);$('dB').classList.toggle('on',r.sel===1)}
+    $('tDesc').textContent=describe(TU.play);if(newRound)syncTweak()}
+  drawPrev();drawChart()}
+function syncTweak(){if(TU.play)$('tTweak').querySelectorAll('input').forEach((el,i)=>{el.value=TU.play[i]*100})}
+function drawPrev(){const f=fitCanvas($('tPrev'));if(!f||!TU.champ)return;const{g,w,h}=f,x=TU.champ.x,T=pT(x),N=Math.round(w);g.clearRect(0,0,w,h);
+  CH.forEach(c=>{g.beginPath();g.strokeStyle=COL[c];g.lineWidth=1.4;for(let i=0;i<=N;i++){const y=h-3-pf(x,i/N*T)[c]*(h-6);i?g.lineTo(i,y):g.moveTo(i,y)}g.stroke()})}
+function drawChart(){const f=fitCanvas($('tChart'));if(!f)return;const{g,w,h}=f,H=S.t2.hist,n=H.length;g.clearRect(0,0,w,h);
+  g.strokeStyle='#1c2029';g.fillStyle='#8b93a3';g.font='10px sans-serif';[1,5.5,10].forEach(v=>{const y=h-8-(v-1)/9*(h-16);g.beginPath();g.moveTo(22,y);g.lineTo(w,y);g.stroke();g.fillText(v,2,y+3)});
+  if(n<2)return;g.beginPath();g.strokeStyle='#6ee7b7';g.lineWidth=2;H.forEach((v,i)=>{const X=24+i/(n-1)*(w-30),Y=h-8-(v-1)/9*(h-16);i?g.lineTo(X,Y):g.moveTo(X,Y)});g.stroke()}
 
 /* ================= 界面绑定 ================= */
 function showTab(t){document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id==='t-'+t));document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
@@ -520,8 +604,6 @@ CH.forEach(c=>{bindRange('cap'+c,()=>S.caps[c],v=>{S.caps[c]=v;$('m'+c).max=v},v
 bindRange('gain',()=>S.gain,v=>S.gain=v,v=>v+'%');bindRange('rise',()=>S.rise,v=>S.rise=v,v=>(v/10).toFixed(1)+' 秒');bindRange('bGuard',()=>S.bGuard,v=>S.bGuard=v,v=>v+' 秒');
 bindRange('micSens',()=>20,()=>{},v=>(v/10).toFixed(1)+'×');
 seg('aDir',v=>S.aDir===v,v=>S.aDir=v);seg('padRel',v=>S.padRel===v,v=>S.padRel=v);seg('genCh',v=>genCh===v,v=>genCh=v);
-const updAct=seg('tAct',v=>S.tuner.act[v],v=>{S.tuner.act[v]=!S.tuner.act[v];if(!CH.some(c=>S.tuner.act[c]))S.tuner.act[v]=true;if(TU.cur&&!TU.cur.best){TU.cur.x=sane(TU.cur.x);uiTuner()}});
-bindRange('tExp',()=>S.tuner.exp,v=>S.tuner.exp=v,v=>v<30?'保守精修':v<65?'均衡':'大胆探索');
 $('btnRand').onclick=()=>setSource(out.src==='random'?null:'random');
 $('btnEdge').onclick=()=>{out.pauseUntil=nowS()+ +$('edgeSec').value};
 $('padGo').onclick=()=>setSource(out.src==='pad'?null:'pad');
@@ -538,23 +620,35 @@ $('genSmooth').onclick=()=>{if(!ED)return;const a=ED.tr[genCh],N=a.length;ED.tr[
 $('edSave').onclick=()=>{if(!ED)return;ED.name=ED.name||'未命名';const i=S.waves.findIndex(w=>w.id===ED.id),w=JSON.parse(JSON.stringify(ED));if(i>=0)S.waves[i]=w;else S.waves.push(w);if(WP.w&&WP.w.id===w.id)WP.w=w;save();renderWaves()};
 $('edPlay').onclick=()=>{if(ED)playWave(ED)};$('edClose').onclick=()=>{ED=null;$('edCard').hidden=true};
 // 拟合
+function tunerGo(){TU.t0=TU.t0||nowS();if(out.src!=='tuner')setSource('tuner');nextRound()}
 $('tRate').innerHTML=Array.from({length:10},(_,i)=>`<button data-y="${i+1}">${i+1}</button>`).join('');
-$('tRate').onclick=e=>{const y=e.target.dataset.y;if(y)tunerRate(+y)};
-$('tLive').addEventListener('click',e=>{const h=e.target.dataset.hot;if(h)tunerRate(2,h)});
-$('tSkip').onclick=()=>{TU.cur.t0=TU.t0;tunerStart()};
-$('tGo').onclick=()=>{if(out.src==='tuner'&&TU.cur&&!TU.cur.best)return setSource(null);tunerModel();TU.cur=null;tunerStart()};
-$('tBest').onclick=()=>{if(out.src==='tuner'&&TU.cur&&TU.cur.best)return setSource(null);tunerModel();if(!TU.best)return alert('至少先完成 3 轮评分');TU.cur=null;tunerStart({x:TU.best.x.slice(),why:'',best:true})};
-$('tSave').onclick=()=>{tunerModel();if(!TU.best)return alert('至少先完成 3 轮评分');S.waves.push(tunerWave(TU.best.x));save();renderWaves();alert('已保存到波形库')};
-$('tReset').onclick=()=>{if(confirm('清空全部拟合数据并重新开始？')){if(out.src==='tuner')setSource(null);S.tuner=JSON.parse(JSON.stringify(DEF.tuner));TU.model=TU.best=null;save();updAct();$('tExp').value=S.tuner.exp;uiTuner()}};
+$('tRate').onclick=e=>{const y=e.target.dataset.y;if(y)fbRate(+y)};
+$('tSl').oninput=()=>{const r=TU.r;if(r&&r.at){setPlay(r.at($('tSl').value/100),false);$('tDesc').textContent=describe(TU.play)}};
+$('tPick').onclick=fbLine;
+$('dA').onclick=()=>{const r=TU.r;if(r&&r.type==='duel'){r.sel=0;setPlay(r.xs[0],true);uiTuner()}};
+$('dB').onclick=()=>{const r=TU.r;if(r&&r.type==='duel'){r.sel=1;setPlay(r.xs[1],true);uiTuner()}};
+$('tLive').addEventListener('click',e=>{const d=e.target.dataset;if(d.d)fbDuel(d.d);else if(d.co)coact(d.co);else if(d.hot)hot(d.hot)});
+$('tSkip').onclick=()=>nextRound();
+$('tGo').onclick=()=>{if(out.src==='tuner'&&TU.r)return setSource(null);tunerGo()};
+$('tBest').onclick=()=>{if(out.src==='tuner'&&TU.best)return setSource(null);if(!S.t2.n)return alert('先完成几轮反馈');champion();TU.t0=TU.t0||nowS();if(out.src!=='tuner')setSource('tuner');TU.r=null;TU.best=true;setPlay(TU.champ.x,true);uiTuner()};
+$('tSave').onclick=()=>{if(!S.t2.n)return alert('先完成几轮反馈');champion();S.waves.push(tunerWave(TU.champ.x));save();renderWaves();alert('已保存到波形库')};
+$('tReset').onclick=()=>{if(confirm('清空全部拟合数据并重新开始？')){if(out.src==='tuner')setSource(null);S.t2=T2DEF();TU.model=TU.champ=null;TU.rc=0;save();location.reload()}};
 $('tTweak').innerHTML=PN.map((n,i)=>`<div class="sl"><b>${n}</b><input type="range" min="0" max="100" data-i="${i}"><output></output></div>`).join('');
-$('tTweak').oninput=e=>{const i=e.target.dataset.i;if(i==null||!TU.cur)return;TU.cur.x[+i]=e.target.value/100;TU.cur.x=sane(TU.cur.x);TU.cur.why='手动微调';$('tWhy').textContent='手动微调';$('tDesc').textContent=describe(TU.cur.x)};
+$('tTweak').oninput=e=>{const i=e.target.dataset.i;if(i==null||!TU.play)return;const x=TU.play.slice();x[+i]=e.target.value/100;setPlay(sane(x),false);$('tDesc').textContent=describe(TU.play)};
+$('tTwOk').onclick=()=>{const r=TU.r;if(!r||!TU.play||dist(TU.play,r.base)<.005)return;addPair(addPt(TU.play),addPt(r.base));TU.force=TU.play;commit(true)};
+$('tTweakBox').ontoggle=syncTweak;
+const restage=()=>{TU.model&&champion();if(out.src==='tuner'&&TU.r)nextRound();else uiTuner()};
+seg('tStage',v=>S.t2.stage===+v,v=>{S.t2.stage=+v;restage()});
+seg('tAct',v=>S.t2.act[v],v=>{const a=S.t2.act;a[v]=!a[v];if(!CH.some(c=>a[c]))a[v]=true;restage()});
+seg('tMode',v=>S.t2.mode===v,v=>{S.t2.mode=v;if(out.src==='tuner'&&TU.r)nextRound()});
+bindRange('tExp',()=>S.t2.exp,v=>S.t2.exp=v,v=>v<30?'保守精修':v<65?'均衡':'大胆探索');
 // 数据
 $('btnExp').onclick=()=>download('ycy-backup.json',JSON.stringify(S));$('btnImp').onclick=()=>$('impFile').click();
 $('impFile').onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text());if(!j.caps||!Array.isArray(j.waves)||!j.waves.every(validWave))throw 0;localStorage.setItem(KEY,JSON.stringify(j));location.reload()}catch(x){alert('不是有效的备份文件')}};
-showInfo();renderWaves();tunerModel();uiTuner();uiSrc();drawScope();
+showInfo();renderWaves();if(S.t2.n)buildModel();champion();uiTuner();uiSrc();drawScope();
 (function loop(){if($('t-play').classList.contains('on')){drawPad();drawGame()}else gameStep();requestAnimationFrame(loop)})();
 addEventListener('resize',()=>{drawEd();drawChart()});
-window.YCY={S,out,ble,pkt,tunerRate,tunerStart,TU,pf,gpFit,tunerModel,tick,setSource,SRC};
+window.YCY={CFG,S,out,ble,pkt,TU,pf,sane,randX,buildModel,champion,nextRound,fbLine,fbDuel,fbRate,coact,tick,setSource,SRC};
 </script>
 </body>
 </html>
